@@ -16028,7 +16028,7 @@ private void readObject(ObjectInputStream in)
         throw new InvalidObjectException("Invalid age");
     }
 }
-```"
+```
 
 ---
 
@@ -16056,9 +16056,12 @@ private void readObject(ObjectInputStream in)
 **End of Part 8** - Serialization & Deserialization Complete! ✅
 
 ---
+
 ---
 
-# Part 9: Advanced Java Concepts & Core Fundamentals
+# 📦 PART 9: ADVANCED JAVA CONCEPTS & CORE FUNDAMENTALS
+
+---
 
 ## 45. Marker Interfaces in Java
 
@@ -16855,7 +16858,7 @@ List<String> list = new ArrayList<String>() {{
 
 // Use
 List<String> list = List.of("A", "B"); // Java 9+
-```"
+```
 
 ---
 
@@ -17261,7 +17264,7 @@ System.out.print("World");     // Hello World
 System.out.println("Hello");
 System.out.println("World");   // Hello
                                 // World
-```"
+```
 
 ---
 
@@ -17693,7 +17696,7 @@ Output:
 1. Static block
 2. Instance block
 3. Constructor
-```"
+```
 
 ---
 
@@ -17724,7 +17727,7 @@ Static 1
 Static 2
 Instance 1
 Instance 2
-```"
+```
 
 ---
 
@@ -17753,7 +17756,7 @@ Output:
 ```
 Class loaded
 Main started
-```"
+```
 
 ---
 
@@ -17781,7 +17784,7 @@ class Employee {
     Employee() { }  // Don't need to repeat initialization
     Employee(String name) { }  // Don't need to repeat initialization
 }
-```"
+```
 
 ---
 
@@ -18268,7 +18271,7 @@ class Department {
         employees.add(emp);
     }
 }
-```"
+```
 
 ---
 
