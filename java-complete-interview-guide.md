@@ -16055,5 +16055,2333 @@ private void readObject(ObjectInputStream in)
 
 **End of Part 8** - Serialization & Deserialization Complete! ✅
 
-**Total Document:** 8 major parts covering complete Java OOP, Advanced concepts, Design Patterns, Security, and Serialization! 🎉
+---
+---
+
+# Part 9: Advanced Java Concepts & Core Fundamentals
+
+## 45. Marker Interfaces in Java
+
+### What is a Marker Interface?
+
+A **marker interface** (also called **tag interface**) is an interface that has **no methods or fields** declared in it. It serves as a "marker" or "tag" to inform the JVM or compiler that objects of the class have some special behavior.
+
+**Key Characteristics:**
+- ✅ Empty interface (no methods)
+- ✅ Used to provide metadata to the JVM
+- ✅ Signals special treatment or capability
+- ✅ Checked at runtime or compile time
+
+---
+
+### Visual Representation
+
+```
+MARKER INTERFACE CONCEPT
+════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────┐
+│  Marker Interface (Empty)                      │
+│                                                 │
+│  public interface Serializable {               │
+│      // NO METHODS                             │
+│      // NO FIELDS                              │
+│  }                                             │
+│                                                 │
+│  Purpose: Tag/Mark classes for special ability │
+└─────────────────────────────────────────────────┘
+                    ↓
+        ┌───────────────────────┐
+        │ Classes Implement It  │
+        └───────────────────────┘
+                    ↓
+    ┌───────────────┴───────────────┐
+    ↓                               ↓
+┌─────────────────┐      ┌─────────────────┐
+│ JVM/Compiler    │      │ Framework       │
+│ Checks          │      │ Checks          │
+│ "Is this class  │      │ "Does this      │
+│  marked?"       │      │  have special   │
+│                 │      │  capability?"   │
+└─────────────────┘      └─────────────────┘
+```
+
+---
+
+### Common Marker Interfaces in Java
+
+#### 1️⃣ **Serializable**
+**Package:** `java.io.Serializable`  
+**Purpose:** Marks a class as serializable (can be converted to byte stream)
+
+```java
+import java.io.Serializable;
+
+public class Employee implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private int id;
+    private String name;
+    
+    // If class doesn't implement Serializable:
+    // NotSerializableException will be thrown
+}
+```
+
+**What happens internally:**
+- JVM checks: "Does this class implement Serializable?"
+- If YES → Allow serialization
+- If NO → Throw `NotSerializableException`
+
+---
+
+#### 2️⃣ **Cloneable**
+**Package:** `java.lang.Cloneable`  
+**Purpose:** Marks a class whose objects can be cloned
+
+```java
+public class Person implements Cloneable {
+    private String name;
+    private int age;
+    
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+    
+    // If class doesn't implement Cloneable:
+    // CloneNotSupportedException will be thrown
+}
+```
+
+**What happens internally:**
+- JVM checks: "Does this class implement Cloneable?"
+- If YES → Allow cloning
+- If NO → Throw `CloneNotSupportedException`
+
+---
+
+#### 3️⃣ **Remote**
+**Package:** `java.rmi.Remote`  
+**Purpose:** Marks an interface whose methods can be invoked remotely (RMI)
+
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface Calculator extends Remote {
+    int add(int a, int b) throws RemoteException;
+    int subtract(int a, int b) throws RemoteException;
+}
+```
+
+**What happens internally:**
+- JVM marks this interface for Remote Method Invocation (RMI)
+- Allows methods to be called from different JVM/machine
+
+---
+
+#### 4️⃣ **RandomAccess**
+**Package:** `java.util.RandomAccess`  
+**Purpose:** Marks collections that support fast random access (index-based access)
+
+```java
+import java.util.*;
+
+public class Example {
+    public static void main(String[] args) {
+        List<Integer> arrayList = new ArrayList<>();  // Implements RandomAccess
+        List<Integer> linkedList = new LinkedList<>(); // Does NOT implement RandomAccess
+        
+        // Check if list supports fast random access
+        if (arrayList instanceof RandomAccess) {
+            System.out.println("Use for loop for better performance");
+        } else {
+            System.out.println("Use iterator for better performance");
+        }
+    }
+}
+```
+
+**What happens internally:**
+- Algorithms check this marker to choose optimal iteration strategy
+- ArrayList → O(1) random access → use index-based loop
+- LinkedList → O(n) random access → use iterator
+
+---
+
+### Complete Example: Marker Interface in Action
+
+```java
+import java.io.*;
+
+// Employee implements Serializable marker interface
+class Employee implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private int id;
+    private String name;
+    
+    public Employee(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+    
+    @Override
+    public String toString() {
+        return "Employee{id=" + id + ", name='" + name + "'}";
+    }
+}
+
+// Department does NOT implement Serializable
+class Department {
+    private String deptName;
+    
+    public Department(String deptName) {
+        this.deptName = deptName;
+    }
+}
+
+public class MarkerInterfaceDemo {
+    public static void main(String[] args) {
+        // ✅ Employee can be serialized
+        Employee emp = new Employee(101, "John Doe");
+        
+        try {
+            // Serialize
+            FileOutputStream fos = new FileOutputStream("employee.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(emp); // ✅ WORKS - implements Serializable
+            oos.close();
+            System.out.println("✅ Employee serialized successfully");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        // ❌ Department CANNOT be serialized
+        Department dept = new Department("IT");
+        
+        try {
+            // Serialize
+            FileOutputStream fos = new FileOutputStream("department.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(dept); // ❌ FAILS - doesn't implement Serializable
+            oos.close();
+        } catch (NotSerializableException e) {
+            System.out.println("❌ Error: " + e.getMessage());
+            // Output: Department
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**Output:**
+```
+✅ Employee serialized successfully
+❌ Error: Department
+```
+
+---
+
+### Custom Marker Interface
+
+You can create your own marker interfaces:
+
+```java
+// Custom marker interface
+public interface Deletable {
+    // No methods - just a marker
+}
+
+public interface Editable {
+    // No methods - just a marker
+}
+
+// Classes implement marker interfaces
+class Document implements Deletable, Editable {
+    private String content;
+    
+    public Document(String content) {
+        this.content = content;
+    }
+}
+
+class SystemFile {
+    private String filename;
+    
+    public SystemFile(String filename) {
+        this.filename = filename;
+    }
+}
+
+// Check permissions using marker interfaces
+public class PermissionChecker {
+    
+    public static boolean canDelete(Object obj) {
+        return obj instanceof Deletable;
+    }
+    
+    public static boolean canEdit(Object obj) {
+        return obj instanceof Editable;
+    }
+    
+    public static void main(String[] args) {
+        Document doc = new Document("Meeting notes");
+        SystemFile file = new SystemFile("system.config");
+        
+        System.out.println("Document deletable: " + canDelete(doc));  // true
+        System.out.println("Document editable: " + canEdit(doc));     // true
+        System.out.println("SystemFile deletable: " + canDelete(file)); // false
+        System.out.println("SystemFile editable: " + canEdit(file));   // false
+    }
+}
+```
+
+**Output:**
+```
+Document deletable: true
+Document editable: true
+SystemFile deletable: false
+SystemFile editable: false
+```
+
+---
+
+### Marker Interface vs Annotation
+
+**Modern Alternative:** Annotations (since Java 5)
+
+```java
+// Old way - Marker Interface
+public class Employee implements Serializable {
+}
+
+// Modern way - Annotation
+@Entity
+public class Employee {
+}
+```
+
+**Comparison:**
+
+| Feature | Marker Interface | Annotation |
+|---------|------------------|------------|
+| **Check Time** | Runtime (using `instanceof`) | Compile-time or Runtime |
+| **Type Safety** | YES (enforced by compiler) | NO (optional) |
+| **Multiple Markers** | Can implement many interfaces | Can have multiple annotations |
+| **Flexibility** | Limited | More metadata, parameters |
+| **Examples** | Serializable, Cloneable | @Override, @Deprecated, @Entity |
+
+---
+
+### 🎯 Interview Questions & Answers
+
+**Q1: What is a marker interface in Java?**
+
+**Answer:**
+"A marker interface is an empty interface with no methods or fields. It's used to mark or tag classes to provide metadata to the JVM or frameworks. 
+
+Examples: `Serializable`, `Cloneable`, `Remote`
+
+For instance, when a class implements `Serializable`, the JVM knows it can convert that object to a byte stream. If a class doesn't implement `Serializable`, attempting to serialize it throws `NotSerializableException`."
+
+---
+
+**Q2: Why don't marker interfaces have any methods?**
+
+**Answer:**
+"Marker interfaces don't have methods because their purpose is NOT to enforce behavior, but to provide TYPE INFORMATION to the JVM or frameworks.
+
+They work as a flag: 'This class has a special capability.'
+
+The actual implementation is provided by the JVM or framework that checks for the marker. For example, serialization logic is in `ObjectOutputStream`, not in the `Serializable` interface."
+
+---
+
+**Q3: Can you create your own marker interface?**
+
+**Answer:**
+"Yes, you can create custom marker interfaces:
+
+```java
+public interface Auditable {
+    // Empty - marker interface
+}
+
+public class BankTransaction implements Auditable {
+    // This transaction can be audited
+}
+
+// Framework checks
+if (transaction instanceof Auditable) {
+    auditLog.record(transaction);
+}
+```
+
+However, modern Java prefers annotations over marker interfaces for better flexibility."
+
+---
+
+**Q4: What's the difference between Serializable and Cloneable?**
+
+**Answer:**
+
+| Aspect | Serializable | Cloneable |
+|--------|--------------|-----------|
+| **Purpose** | Enable object serialization | Enable object cloning |
+| **Exception** | NotSerializableException | CloneNotSupportedException |
+| **Usage** | Save to file/network | Create object copy |
+| **Override** | Optional: writeObject/readObject | Must override: clone() |
+
+Both are marker interfaces that signal special capability to the JVM."
+
+---
+
+**Q5: Why use marker interfaces instead of regular interfaces with methods?**
+
+**Answer:**
+"Marker interfaces are used when you want to:
+
+1. **Just TAG/MARK** a class - no behavior needed
+2. **Type checking** - use `instanceof` to check capability
+3. **Backward compatibility** - can add capability without breaking existing code
+
+If you need to enforce behavior with methods, use a regular interface.  
+If you just need metadata, use a marker interface (or modern annotations)."
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+## 46. Double Brace Initialization in Java
+
+### What is Double Brace Initialization?
+
+**Double Brace Initialization** is a technique in Java to initialize collections (like `ArrayList`, `HashMap`, `HashSet`) in a more concise way using **two pairs of braces `{{ }}`**.
+
+**Syntax:**
+```java
+new CollectionType() {{
+    // initialization code
+}};
+```
+
+---
+
+### Visual Breakdown
+
+```
+DOUBLE BRACE INITIALIZATION
+════════════════════════════════════════════════════════════════════
+
+Outer Brace: Creates anonymous inner class
+│
+│   Inner Brace: Instance initializer block
+│   │
+↓   ↓
+new ArrayList<String>() {{
+    add("Java");
+    add("Python");
+    add("C++");
+}};
+
+WHAT HAPPENS:
+┌────────────────────────────────────────────────────────────────┐
+│ Step 1: Create anonymous inner class extending ArrayList      │
+│                                                                 │
+│   new ArrayList<String>() { ... }                             │
+│                    ↑                                           │
+│                    └── Anonymous inner class                   │
+└────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ Step 2: Instance initializer block runs when object created   │
+│                                                                 │
+│   { { add("Java"); add("Python"); } }                         │
+│     ↑                                                          │
+│     └── Instance initializer (runs at construction)           │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Examples
+
+#### Example 1: ArrayList Initialization
+
+**Traditional Way:**
+```java
+List<String> languages = new ArrayList<>();
+languages.add("Java");
+languages.add("Python");
+languages.add("C++");
+languages.add("JavaScript");
+```
+
+**Double Brace Initialization:**
+```java
+List<String> languages = new ArrayList<String>() {{
+    add("Java");
+    add("Python");
+    add("C++");
+    add("JavaScript");
+}};
+```
+
+**Modern Way (Java 9+):**
+```java
+List<String> languages = List.of("Java", "Python", "C++", "JavaScript");
+```
+
+---
+
+#### Example 2: HashMap Initialization
+
+**Traditional Way:**
+```java
+Map<String, Integer> scores = new HashMap<>();
+scores.put("Alice", 95);
+scores.put("Bob", 87);
+scores.put("Charlie", 92);
+```
+
+**Double Brace Initialization:**
+```java
+Map<String, Integer> scores = new HashMap<String, Integer>() {{
+    put("Alice", 95);
+    put("Bob", 87);
+    put("Charlie", 92);
+}};
+```
+
+**Modern Way (Java 9+):**
+```java
+Map<String, Integer> scores = Map.of(
+    "Alice", 95,
+    "Bob", 87,
+    "Charlie", 92
+);
+```
+
+---
+
+#### Example 3: HashSet Initialization
+
+**Traditional Way:**
+```java
+Set<String> colors = new HashSet<>();
+colors.add("Red");
+colors.add("Green");
+colors.add("Blue");
+```
+
+**Double Brace Initialization:**
+```java
+Set<String> colors = new HashSet<String>() {{
+    add("Red");
+    add("Green");
+    add("Blue");
+}};
+```
+
+**Modern Way (Java 9+):**
+```java
+Set<String> colors = Set.of("Red", "Green", "Blue");
+```
+
+---
+
+### Complete Example
+
+```java
+import java.util.*;
+
+public class DoubleBraceDemo {
+    public static void main(String[] args) {
+        
+        // 1. ArrayList with Double Brace
+        List<String> fruits = new ArrayList<String>() {{
+            add("Apple");
+            add("Banana");
+            add("Orange");
+        }};
+        System.out.println("Fruits: " + fruits);
+        
+        
+        // 2. HashMap with Double Brace
+        Map<String, String> capitals = new HashMap<String, String>() {{
+            put("India", "New Delhi");
+            put("USA", "Washington DC");
+            put("Japan", "Tokyo");
+        }};
+        System.out.println("Capitals: " + capitals);
+        
+        
+        // 3. HashSet with Double Brace
+        Set<Integer> primeNumbers = new HashSet<Integer>() {{
+            add(2);
+            add(3);
+            add(5);
+            add(7);
+            add(11);
+        }};
+        System.out.println("Primes: " + primeNumbers);
+        
+        
+        // 4. Nested Collections
+        List<List<String>> matrix = new ArrayList<List<String>>() {{
+            add(new ArrayList<String>() {{
+                add("A1"); add("A2");
+            }});
+            add(new ArrayList<String>() {{
+                add("B1"); add("B2");
+            }});
+        }};
+        System.out.println("Matrix: " + matrix);
+    }
+}
+```
+
+**Output:**
+```
+Fruits: [Apple, Banana, Orange]
+Capitals: {India=New Delhi, USA=Washington DC, Japan=Tokyo}
+Primes: [2, 3, 5, 7, 11]
+Matrix: [[A1, A2], [B1, B2]]
+```
+
+---
+
+### How It Works Internally
+
+```java
+List<String> list = new ArrayList<String>() {{
+    add("Item 1");
+}};
+```
+
+**What the compiler sees:**
+
+```java
+// Step 1: Anonymous inner class created
+class AnonymousArrayList extends ArrayList<String> {
+    
+    // Step 2: Instance initializer block
+    {
+        add("Item 1");  // Runs when object is created
+    }
+}
+
+// Step 3: Create instance of anonymous class
+List<String> list = new AnonymousArrayList();
+```
+
+---
+
+### ⚠️ Disadvantages & Why NOT to Use
+
+#### 1️⃣ **Creates Anonymous Inner Class (Memory Overhead)**
+
+Each double brace initialization creates a **new class file**:
+
+```java
+// Creates MyClass$1.class, MyClass$2.class, etc.
+List<String> list1 = new ArrayList<String>() {{ add("A"); }};
+List<String> list2 = new ArrayList<String>() {{ add("B"); }};
+// Two separate .class files generated!
+```
+
+**Problem:**
+- Extra `.class` files
+- Increased memory footprint
+- ClassLoader overhead
+
+---
+
+#### 2️⃣ **Holds Reference to Outer Class (Memory Leak Risk)**
+
+Anonymous inner classes hold implicit reference to outer class:
+
+```java
+public class OuterClass {
+    private int value = 100;
+    
+    public List<String> createList() {
+        return new ArrayList<String>() {{
+            add("Item");
+            // This inner class holds reference to OuterClass instance!
+        }};
+    }
+}
+```
+
+**Problem:**
+- Even if `OuterClass` is no longer needed, the list keeps it in memory
+- **Memory leak** in long-lived collections
+
+---
+
+#### 3️⃣ **Serialization Issues**
+
+Anonymous inner classes can cause serialization problems:
+
+```java
+List<String> list = new ArrayList<String>() {{
+    add("Test");
+}};
+
+// Serialization may fail or behave unexpectedly
+ObjectOutputStream oos = new ObjectOutputStream(fos);
+oos.writeObject(list); // May throw exception
+```
+
+---
+
+#### 4️⃣ **Confusing for Code Reviewers**
+
+```java
+// What is this? Two braces?
+List<String> list = new ArrayList<String>() {{
+    add("Item");
+}};
+```
+
+Many developers find this syntax confusing and less readable.
+
+---
+
+### ✅ Better Alternatives
+
+#### **1. Use Factory Methods (Java 9+)** ⭐ RECOMMENDED
+
+```java
+// Immutable list
+List<String> list = List.of("A", "B", "C");
+
+// Immutable set
+Set<String> set = Set.of("X", "Y", "Z");
+
+// Immutable map
+Map<String, Integer> map = Map.of("a", 1, "b", 2, "c", 3);
+```
+
+**Advantages:**
+- ✅ Concise
+- ✅ No extra class files
+- ✅ Immutable (thread-safe)
+- ✅ Better performance
+
+---
+
+#### **2. Use Arrays.asList()**
+
+```java
+List<String> list = Arrays.asList("A", "B", "C");
+```
+
+**Note:** Returns fixed-size list (cannot add/remove)
+
+---
+
+#### **3. Use Stream API**
+
+```java
+List<String> list = Stream.of("A", "B", "C")
+                          .collect(Collectors.toList());
+```
+
+---
+
+#### **4. Traditional Initialization**
+
+```java
+List<String> list = new ArrayList<>();
+list.add("A");
+list.add("B");
+list.add("C");
+```
+
+**Advantages:**
+- ✅ Clear and explicit
+- ✅ No hidden classes
+- ✅ Easy to debug
+
+---
+
+### 🎯 Interview Questions & Answers
+
+**Q1: What is double brace initialization in Java?**
+
+**Answer:**
+"Double brace initialization is a technique to initialize collections using two sets of braces `{{ }}`. 
+
+The outer braces create an **anonymous inner class**, and the inner braces are an **instance initializer block** that runs during object construction.
+
+Example:
+```java
+List<String> list = new ArrayList<String>() {{
+    add("A");
+    add("B");
+}};
+```
+
+However, it's **NOT recommended** because:
+1. Creates extra `.class` files
+2. Can cause memory leaks (holds reference to outer class)
+3. Serialization issues
+4. Less readable
+
+**Better alternative:** Use `List.of()`, `Set.of()`, `Map.of()` (Java 9+)."
+
+---
+
+**Q2: Why is double brace initialization considered an anti-pattern?**
+
+**Answer:**
+"Double brace initialization is an anti-pattern because:
+
+1. **Memory overhead** - Each usage creates a new anonymous inner class (separate `.class` file)
+2. **Memory leak risk** - Anonymous inner class holds implicit reference to outer class
+3. **Serialization problems** - Anonymous classes may not serialize properly
+4. **Confusing syntax** - Not intuitive for code readers
+
+**Modern alternative:**
+```java
+// Instead of
+List<String> list = new ArrayList<String>() {{
+    add("A"); add("B");
+}};
+
+// Use
+List<String> list = List.of("A", "B"); // Java 9+
+```"
+
+---
+
+**Q3: How does double brace initialization work internally?**
+
+**Answer:**
+"Internally, double brace initialization:
+
+1. **First brace:** Creates an anonymous inner class that extends the collection
+2. **Second brace:** Defines an instance initializer block that runs during object creation
+
+Example:
+```java
+new ArrayList<String>() {{
+    add("Item");
+}};
+```
+
+Compiler translates to:
+```java
+class Anonymous$1 extends ArrayList<String> {
+    {  // Instance initializer
+        add("Item");
+    }
+}
+new Anonymous$1();
+```
+
+This is why it creates extra `.class` files."
+
+---
+
+**Q4: What's a better way to initialize collections in modern Java?**
+
+**Answer:**
+"Modern Java (9+) provides factory methods:
+
+```java
+// Immutable List
+List<String> list = List.of("A", "B", "C");
+
+// Immutable Set
+Set<Integer> set = Set.of(1, 2, 3);
+
+// Immutable Map
+Map<String, Integer> map = Map.of("a", 1, "b", 2);
+
+// For mutable collections
+List<String> mutableList = new ArrayList<>(List.of("A", "B", "C"));
+```
+
+**Advantages:**
+- ✅ Concise syntax
+- ✅ No extra class files
+- ✅ Better performance
+- ✅ Thread-safe (immutable)
+- ✅ Clear intent"
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+## 47. System.out.println() - Deep Dive
+
+### What is System.out.println()?
+
+**`System.out.println()`** is one of the most commonly used statements in Java to print output to the console.
+
+Let's break it down:
+
+```
+System  .  out  .  println()
+  ↓        ↓       ↓
+Class    Object   Method
+```
+
+---
+
+### Component Breakdown
+
+```
+SYSTEM.OUT.PRINTLN() ARCHITECTURE
+════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ System                                                          │
+│ ↓                                                               │
+│ Final class in java.lang package                               │
+│ Contains static fields and methods                             │
+│                                                                 │
+│   public final class System {                                  │
+│       public static final InputStream in;                      │
+│       public static final PrintStream out;  ← THIS!           │
+│       public static final PrintStream err;                     │
+│   }                                                            │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ out                                                             │
+│ ↓                                                               │
+│ Static field of type PrintStream                               │
+│ Represents standard output stream (console)                    │
+│                                                                 │
+│   public static final PrintStream out;                         │
+│                          ↑                                      │
+│                          Object of PrintStream class           │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ println()                                                       │
+│ ↓                                                               │
+│ Method of PrintStream class                                    │
+│ Prints the argument and adds a newline                         │
+│                                                                 │
+│   public void println(String x) {                              │
+│       synchronized (this) {                                    │
+│           print(x);                                            │
+│           newLine();                                           │
+│       }                                                        │
+│   }                                                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Detailed Explanation
+
+#### 1️⃣ **System**
+- **Type:** `final class`
+- **Package:** `java.lang` (automatically imported)
+- **Purpose:** Provides access to system resources
+- **Cannot be instantiated** - Constructor is private
+
+```java
+public final class System {
+    // Private constructor - cannot create instance
+    private System() { }
+    
+    // Static members
+    public static final InputStream in;   // Standard input
+    public static final PrintStream out;  // Standard output
+    public static final PrintStream err;  // Standard error
+}
+```
+
+---
+
+#### 2️⃣ **out**
+- **Type:** `public static final PrintStream`
+- **Purpose:** Represents standard output stream (console)
+- **Static:** Can be accessed without creating object
+- **Final:** Cannot be reassigned (but can be redirected)
+
+```java
+public static final PrintStream out;
+```
+
+**Why static?**
+- Because `System` class cannot be instantiated
+- Need to access `out` without creating `System` object
+
+**Why final?**
+- Prevents accidental reassignment
+- Ensures consistency
+
+---
+
+#### 3️⃣ **println()**
+- **Type:** Method of `PrintStream` class
+- **Purpose:** Prints argument and adds newline (`\n`)
+- **Overloaded:** Multiple versions for different data types
+
+```java
+public class PrintStream {
+    public void println()                 { /* ... */ }
+    public void println(boolean x)        { /* ... */ }
+    public void println(char x)           { /* ... */ }
+    public void println(int x)            { /* ... */ }
+    public void println(long x)           { /* ... */ }
+    public void println(float x)          { /* ... */ }
+    public void println(double x)         { /* ... */  }
+    public void println(char[] x)         { /* ... */ }
+    public void println(String x)         { /* ... */ }
+    public void println(Object x)         { /* ... */ }
+}
+```
+
+---
+
+### Flow Diagram
+
+```
+USER CODE                      JVM                      CONSOLE
+═══════════════════════════════════════════════════════════════════
+
+System.out.println("Hello")
+   │
+   │ (1) Call static field 'out'
+   ↓
+System.out
+   │ (type: PrintStream)
+   │
+   │ (2) Call println() method
+   ↓
+out.println("Hello")
+   │
+   │ (3) PrintStream processes
+   ↓
+Write to output buffer
+   │
+   │ (4) Flush to console
+   ↓
+Output: Hello
+        ↵ (newline added)
+```
+
+---
+
+### Variants
+
+#### **print() vs println()**
+
+```java
+// print() - No newline
+System.out.print("Hello");
+System.out.print(" World");
+// Output: Hello World
+
+// println() - Adds newline
+System.out.println("Hello");
+System.out.println("World");
+// Output:
+// Hello
+// World
+```
+
+#### **printf() - Formatted Output**
+
+```java
+String name = "Alice";
+int age = 25;
+double salary = 50000.50;
+
+System.out.printf("Name: %s, Age: %d, Salary: %.2f%n", name, age, salary);
+// Output: Name: Alice, Age: 25, Salary: 50000.50
+```
+
+---
+
+### Complete Example
+
+```java
+public class SystemOutExample {
+    public static void main(String[] args) {
+        
+        // 1. Different data types
+        System.out.println("String");        // String
+        System.out.println(123);             // int
+        System.out.println(45.67);           // double
+        System.out.println(true);            // boolean
+        System.out.println('A');             // char
+        
+        // 2. Object
+        Object obj = new Object();
+        System.out.println(obj);             // Calls obj.toString()
+        
+        // 3. null
+        System.out.println(null);            // Prints "null"
+        
+        // 4. Concatenation
+        System.out.println("Age: " + 25);    // Age: 25
+        
+        // 5. Empty line
+        System.out.println();                // Prints newline
+        
+        // 6. print vs println
+        System.out.print("Hello ");
+        System.out.println("World");         // Hello World
+        
+        // 7. printf
+        System.out.printf("Name: %s, Score: %d%n", "Bob", 95);
+    }
+}
+```
+
+**Output:**
+```
+String
+123
+45.67
+true
+A
+java.lang.Object@15db9742
+
+null
+Age: 25
+
+Hello World
+Name: Bob, Score: 95
+```
+
+---
+
+### Internal Implementation
+
+```java
+// Simplified version of how println() works
+
+public class PrintStream extends FilterOutputStream {
+    
+    public void println(String x) {
+        synchronized (this) {
+            print(x);      // Print the string
+            newLine();     // Add newline character
+        }
+    }
+    
+    public void print(String s) {
+        if (s == null) {
+            s = "null";
+        }
+        write(s);  // Write to output stream
+    }
+    
+    private void newLine() {
+        write('\n');  // Platform-specific line separator
+    }
+}
+```
+
+---
+
+### Key Points
+
+| Aspect | Details |
+|--------|---------|
+| **System** | Final class, cannot be instantiated |
+| **out** | Static final field of type PrintStream |
+| **println()** | Method that prints and adds newline |
+| **Package** | java.lang (auto-imported) |
+| **Thread-safe** | Yes (synchronized) |
+| **Overloaded** | Multiple versions for different types |
+| **Performance** | Slower (synchronized), use StringBuilder for loops |
+
+---
+
+### Common Mistakes
+
+#### ❌ **Mistake 1: Trying to instantiate System**
+```java
+System sys = new System(); // ❌ ERROR: Constructor is private
+```
+
+#### ❌ **Mistake 2: Forgetting parentheses**
+```java
+System.out.println; // ❌ ERROR: println is a method, needs ()
+```
+
+#### ✅ **Correct:**
+```java
+System.out.println(); // ✅ Prints empty line
+```
+
+---
+
+### 🎯 Interview Questions & Answers
+
+**Q1: Explain System.out.println() in detail.**
+
+**Answer:**
+"**System.out.println()** has three parts:
+
+1. **System** - Final class in `java.lang`, provides system resources
+2. **out** - Static final field of type `PrintStream`, represents standard output
+3. **println()** - Method of `PrintStream` that prints argument and adds newline
+
+**Why each part:**
+- `System` is final class → Cannot be instantiated
+- `out` is static → Access without creating object
+- `out` is final → Cannot reassign
+- `println()` is overloaded → Works with different types
+
+**Flow:** `System.out` returns `PrintStream` object → Call `println()` → Output to console"
+
+---
+
+**Q2: What is the difference between print() and println()?**
+
+**Answer:**
+
+| Method | Behavior | Example Output |
+|--------|----------|----------------|
+| **print()** | Prints without newline | `print("A"); print("B");` → `AB` |
+| **println()** | Prints with newline | `println("A"); println("B");` → `A` (newline) `B` |
+
+**Code:**
+```java
+System.out.print("Hello ");
+System.out.print("World");     // Hello World
+
+System.out.println("Hello");
+System.out.println("World");   // Hello
+                                // World
+```"
+
+---
+
+**Q3: Why is 'out' declared as static and final?**
+
+**Answer:**
+"**Static:**
+- Because `System` class has a private constructor and cannot be instantiated
+- We need to access `out` without creating a `System` object
+- Allows us to write `System.out` directly
+
+**Final:**
+- Prevents accidental reassignment
+- Ensures `out` always points to standard output stream
+- Provides consistency and safety
+
+**Note:** Although `out` is final, you can still redirect output using `System.setOut()`."
+
+---
+
+**Q4: Can you redirect System.out to a file?**
+
+**Answer:**
+"Yes, using `System.setOut()`:
+
+```java
+import java.io.*;
+
+public class RedirectOutput {
+    public static void main(String[] args) throws FileNotFoundException {
+        // Redirect to file
+        PrintStream fileOut = new PrintStream(new File("output.txt"));
+        System.setOut(fileOut);
+        
+        // This now goes to file
+        System.out.println("This goes to file");
+        System.out.println("Not to console");
+    }
+}
+```
+
+Even though `out` is final, `setOut()` is a native method that can change the reference internally."
+
+---
+
+**Q5: What is System.err and how is it different from System.out?**
+
+**Answer:**
+
+| Stream | Purpose | Color in IDE |
+|--------|---------|--------------|
+| **System.out** | Standard output | Black/Default |
+| **System.err** | Error output | Red |
+
+**Example:**
+```java
+System.out.println("Normal message");  // Black
+System.err.println("Error message");   // Red
+
+// Both are PrintStream, but err is for errors
+```
+
+**Use case:** Separate normal output from error messages, useful for log file redirection."
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+## 48. Java Program Execution Order - Static & Instance Blocks
+
+### The Problem
+
+**Question:** What will be the output of the below Java program and define the steps of execution?
+
+```java
+class InterviewBit{
+    int i;
+    static int j;
+    {
+        System.out.println(" Instance Block 1. Value of i = "+i);
+    }
+    static{
+        System.out.println(" Static Block 1. Value of j = "+j);
+        method_2();
+    }
+    {
+        i = 5;
+    }
+    static{
+        j = 10;
+    }
+    InterviewBit(){
+        System.out.println(" Welcome to InterviewBit ");
+    }
+    public static void main(String[] args){
+        InterviewBit ib = new InterviewBit();
+    }
+    public void method_1(){
+        System.out.println(" Instance method. ");
+    }
+    static{
+        System.out.println(" Static Block 2. Value of j = "+j);
+    }
+    {
+        System.out.println(" Instance Block 2. Value of i = "+i);
+        method_1();
+    }
+    public static void method_2(){
+        System.out.println(" Static method. ");
+    }
+}
+```
+
+---
+
+### 📤 Output
+
+```
+ Static Block 1. Value of j = 0
+ Static method.
+ Static Block 2. Value of j = 10
+ Instance Block 1. Value of i = 0
+ Instance Block 2. Value of i = 5
+ Instance method.
+ Welcome to InterviewBit
+```
+
+---
+
+### 🎯 Execution Order Rules
+
+```
+JAVA CLASS LOADING & INITIALIZATION ORDER
+════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 1: CLASS LOADING (When class is first referenced)        │
+│                                                                 │
+│ 1️⃣  Static variables initialization (default values)           │
+│     int j = 0 (default)                                        │
+│                                                                 │
+│ 2️⃣  Static blocks execution (TOP TO BOTTOM order)              │
+│     - Static Block 1                                           │
+│     - Static Block 2                                           │
+│     - Static Block 3... (if any)                               │
+│                                                                 │
+│ ✅ Class is now loaded (happens ONCE per JVM)                  │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 2: OBJECT CREATION (When 'new' is called)                │
+│                                                                 │
+│ 3️⃣  Instance variables initialization (default values)         │
+│     int i = 0 (default)                                        │
+│                                                                 │
+│ 4️⃣  Instance initializer blocks (TOP TO BOTTOM order)          │
+│     - Instance Block 1                                         │
+│     - Instance Block 2                                         │
+│     - Instance Block 3... (if any)                             │
+│                                                                 │
+│ 5️⃣  Constructor execution                                       │
+│     - Constructor body runs                                    │
+│                                                                 │
+│ ✅ Object is created (happens EVERY time 'new' is called)      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Step-by-Step Execution
+
+#### **Step 1: Class Loading (Static initialization)**
+
+When `InterviewBit` class is loaded (first reference in `main`):
+
+```java
+// Static variables get default values FIRST
+static int j;  // j = 0 (default)
+
+// Then static blocks execute TOP TO BOTTOM
+```
+
+**Static Block 1 executes:**
+```java
+static{
+    System.out.println(" Static Block 1. Value of j = "+j);  // j = 0
+    method_2();  // Calls static method
+}
+```
+**Output:**
+```
+ Static Block 1. Value of j = 0
+ Static method.
+```
+
+---
+
+**Static Block 2 (assigns j = 10):**
+```java
+static{
+    j = 10;  // j is now 10
+}
+```
+
+---
+
+**Static Block 3 executes:**
+```java
+static{
+    System.out.println(" Static Block 2. Value of j = "+j);  // j = 10 now
+}
+```
+**Output:**
+```
+ Static Block 2. Value of j = 10
+```
+
+---
+
+#### **Step 2: Object Creation (Instance initialization)**
+
+When `new InterviewBit()` is called:
+
+```java
+// Instance variables get default values FIRST
+int i;  // i = 0 (default)
+
+// Then instance blocks execute TOP TO BOTTOM
+```
+
+**Instance Block 1 executes:**
+```java
+{
+    System.out.println(" Instance Block 1. Value of i = "+i);  // i = 0
+}
+```
+**Output:**
+```
+ Instance Block 1. Value of i = 0
+```
+
+---
+
+**Instance Block 2 (assigns i = 5):**
+```java
+{
+    i = 5;  // i is now 5
+}
+```
+
+---
+
+**Instance Block 3 executes:**
+```java
+{
+    System.out.println(" Instance Block 2. Value of i = "+i);  // i = 5 now
+    method_1();  // Calls instance method
+}
+```
+**Output:**
+```
+ Instance Block 2. Value of i = 5
+ Instance method.
+```
+
+---
+
+**Constructor executes:**
+```java
+InterviewBit(){
+    System.out.println(" Welcome to InterviewBit ");
+}
+```
+**Output:**
+```
+ Welcome to InterviewBit
+```
+
+---
+
+### Complete Execution Flow Diagram
+
+```
+TIMELINE OF EXECUTION
+════════════════════════════════════════════════════════════════════
+
+main() starts
+    ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ CLASS LOADING (First time class is referenced)                 │
+├─────────────────────────────────────────────────────────────────┤
+│ ⏱️  Static Variable: j = 0 (default)                            │
+├─────────────────────────────────────────────────────────────────┤
+│ 📤 Static Block 1: "Value of j = 0"                            │
+│ 📤 Static method_2(): "Static method."                         │
+├─────────────────────────────────────────────────────────────────┤
+│ ⏱️  Static Block (middle): j = 10                              │
+├─────────────────────────────────────────────────────────────────┤
+│ 📤 Static Block 2: "Value of j = 10"                           │
+└─────────────────────────────────────────────────────────────────┘
+    ↓
+new InterviewBit()  ← Object creation starts
+    ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ OBJECT INITIALIZATION                                           │
+├─────────────────────────────────────────────────────────────────┤
+│ ⏱️  Instance Variable: i = 0 (default)                          │
+├─────────────────────────────────────────────────────────────────┤
+│ 📤 Instance Block 1: "Value of i = 0"                          │
+├─────────────────────────────────────────────────────────────────┤
+│ ⏱️  Instance Block (middle): i = 5                             │
+├─────────────────────────────────────────────────────────────────┤
+│ 📤 Instance Block 2: "Value of i = 5"                          │
+│ 📤 method_1(): "Instance method."                              │
+├─────────────────────────────────────────────────────────────────┤
+│ 📤 Constructor: "Welcome to InterviewBit"                      │
+└─────────────────────────────────────────────────────────────────┘
+    ↓
+Object created successfully
+```
+
+---
+
+### Comparison Table
+
+| Feature | Static Block | Instance Block |
+|---------|--------------|----------------|
+| **When executed** | Class loading (once) | Object creation (every time) |
+| **Keyword** | `static { }` | `{ }` |
+| **Execution order** | Top to bottom | Top to bottom |
+| **Access** | Only static members | Both static & instance |
+| **Runs before** | main() method | Constructor |
+| **Frequency** | Once per class loading | Every object creation |
+
+---
+
+### Key Takeaways
+
+1. **Static blocks execute BEFORE any object creation** (class loading time)
+2. **Static blocks run only ONCE** per JVM
+3. **Instance blocks execute BEFORE constructor** (object creation time)
+4. **Instance blocks run EVERY TIME** an object is created
+5. **Both execute in TOP-TO-BOTTOM order** as they appear in the code
+6. **Default values** are assigned BEFORE blocks execute
+
+---
+
+### Another Example: Multiple Objects
+
+```java
+class Demo {
+    static int count = 0;
+    int id;
+    
+    // Static block
+    static {
+        System.out.println("Static block: count = " + count);
+        count = 100;
+    }
+    
+    // Instance block
+    {
+        id = ++count;
+        System.out.println("Instance block: id = " + id);
+    }
+    
+    // Constructor
+    Demo() {
+        System.out.println("Constructor: id = " + id);
+    }
+    
+    public static void main(String[] args) {
+        System.out.println("Creating first object:");
+        Demo d1 = new Demo();
+        
+        System.out.println("\nCreating second object:");
+        Demo d2 = new Demo();
+    }
+}
+```
+
+**Output:**
+```
+Static block: count = 0
+Creating first object:
+Instance block: id = 101
+Constructor: id = 101
+
+Creating second object:
+Instance block: id = 102
+Constructor: id = 102
+```
+
+**Explanation:**
+- Static block runs **once** (count becomes 100)
+- Instance block runs **twice** (once per object)
+- Constructor runs **twice** (once per object)
+
+---
+
+### 🎯 Interview Questions & Answers
+
+**Q1: What is the execution order of static blocks, instance blocks, and constructors?**
+
+**Answer:**
+"The execution order is:
+
+**PHASE 1: Class Loading (Once)**
+1. Static variables (default values)
+2. Static blocks (top to bottom)
+
+**PHASE 2: Object Creation (Every 'new')**
+3. Instance variables (default values)
+4. Instance blocks (top to bottom)
+5. Constructor
+
+**Example:**
+```java
+class Test {
+    static { System.out.println("1. Static block"); }
+    { System.out.println("2. Instance block"); }
+    Test() { System.out.println("3. Constructor"); }
+}
+```
+Output:
+```
+1. Static block
+2. Instance block
+3. Constructor
+```"
+
+---
+
+**Q2: Can you have multiple static/instance blocks in a class?**
+
+**Answer:**
+"Yes! You can have multiple static and instance blocks. They execute in the order they appear (top to bottom).
+
+```java
+class Demo {
+    static {
+        System.out.println("Static 1");
+    }
+    {
+        System.out.println("Instance 1");
+    }
+    static {
+        System.out.println("Static 2");
+    }
+    {
+        System.out.println("Instance 2");
+    }
+}
+```
+Output:
+```
+Static 1
+Static 2
+Instance 1
+Instance 2
+```"
+
+---
+
+**Q3: When does the static block execute?**
+
+**Answer:**
+"Static blocks execute during **class loading**, which happens:
+
+1. When class is first referenced
+2. Before any object creation
+3. Before `main()` method (if static block is in main class)
+4. **Only once** per JVM
+
+**Example:**
+```java
+class Test {
+    static {
+        System.out.println("Class loaded");
+    }
+    public static void main(String[] args) {
+        System.out.println("Main started");
+    }
+}
+```
+Output:
+```
+Class loaded
+Main started
+```"
+
+---
+
+**Q4: Why use instance blocks when we have constructors?**
+
+**Answer:**
+"Instance blocks are useful for:
+
+1. **Common initialization code** across multiple constructors
+2. **Anonymous inner classes** (where you can't define constructor)
+3. **Object counters** or logging
+
+**Example:**
+```java
+class Employee {
+    static int count = 0;
+    int id;
+    
+    // Instance block - runs for ALL constructors
+    {
+        id = ++count;
+        System.out.println("Employee #" + id + " initialized");
+    }
+    
+    Employee() { }  // Don't need to repeat initialization
+    Employee(String name) { }  // Don't need to repeat initialization
+}
+```"
+
+---
+
+**Q5: Can static blocks access instance variables?**
+
+**Answer:**
+"**NO**, static blocks cannot access instance variables directly because:
+
+1. Static blocks run during **class loading** (before any object exists)
+2. Instance variables belong to **objects** (which don't exist yet)
+
+```java
+class Test {
+    int instanceVar = 10;
+    static int staticVar = 20;
+    
+    static {
+        System.out.println(staticVar);     // ✅ OK
+        System.out.println(instanceVar);   // ❌ ERROR
+    }
+}
+```
+
+**Error:** Cannot make a static reference to the non-static field instanceVar"
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+## 49. Composition and Aggregation in Java
+
+### What are Composition and Aggregation?
+
+**Composition** and **Aggregation** are two types of **"HAS-A"** relationships in Object-Oriented Programming.
+
+```
+RELATIONSHIP TYPES IN OOP
+════════════════════════════════════════════════════════════════════
+
+IS-A Relationship          HAS-A Relationship
+(Inheritance)              (Association)
+      ↓                           ↓
+   extends                 ┌──────┴──────┐
+   implements              │              │
+                      Aggregation    Composition
+                      (weak)         (strong)
+                      "has-a"        "part-of"
+```
+
+---
+
+### Visual Comparison
+
+```
+COMPOSITION VS AGGREGATION
+════════════════════════════════════════════════════════════════════
+
+COMPOSITION (Strong "part-of" relationship)
+┌─────────────────────────────────────────────────────────────────┐
+│                         House                                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Room 1          Room 2          Room 3                  │  │
+│  │  [Cannot exist without House]                            │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  If House is destroyed → Rooms are destroyed                  │
+└─────────────────────────────────────────────────────────────────┘
+
+AGGREGATION (Weak "has-a" relationship)
+┌─────────────────────────────────────────────────────────────────┐
+│                      Department                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Employee 1      Employee 2      Employee 3              │  │
+│  │  [Can exist independently]                               │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  If Department is closed → Employees still exist              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Composition (Strong Relationship)
+
+**Definition:** A **STRONG** "part-of" relationship where the **child cannot exist** independently without the parent.
+
+**Characteristics:**
+- ✅ Strong ownership
+- ✅ Child's lifecycle depends on parent
+- ✅ If parent destroyed, child destroyed
+- ✅ Child cannot be shared
+
+**Real-world examples:**
+- House → Rooms
+- Car → Engine
+- Human → Heart
+- Book → Pages
+
+---
+
+#### Composition Example 1: House and Rooms
+
+```java
+// Room class - CANNOT exist without House
+class Room {
+    private String name;
+    private int area;
+    
+    public Room(String name, int area) {
+        this.name = name;
+        this.area = area;
+    }
+    
+    public String getDetails() {
+        return name + " (" + area + " sq ft)";
+    }
+}
+
+// House class - OWNS Rooms
+class House {
+    private String address;
+    private Room[] rooms;  // Composition: House HAS Rooms
+    
+    public House(String address) {
+        this.address = address;
+        
+        // Rooms created INSIDE House constructor
+        // Rooms cannot exist without House
+        this.rooms = new Room[]{
+            new Room("Bedroom", 200),
+            new Room("Kitchen", 150),
+            new Room("Living Room", 300)
+        };
+    }
+    
+    public void showRooms() {
+        System.out.println("House at: " + address);
+        for (Room room : rooms) {
+            System.out.println("  - " + room.getDetails());
+        }
+    }
+    
+    // When House is destroyed, Rooms are also destroyed
+    // No way to access rooms after house is gone
+}
+
+public class CompositionDemo {
+    public static void main(String[] args) {
+        House house = new House("123 Main St");
+        house.showRooms();
+        
+        house = null;  // House destroyed
+        // Rooms are also destroyed (garbage collected)
+        // Cannot access rooms independently
+    }
+}
+```
+
+**Output:**
+```
+House at: 123 Main St
+  - Bedroom (200 sq ft)
+  - Kitchen (150 sq ft)
+  - Living Room (300 sq ft)
+```
+
+---
+
+#### Composition Example 2: Car and Engine
+
+```java
+// Engine class - CANNOT exist without Car in this design
+class Engine {
+    private int horsepower;
+    private String type;
+    
+    public Engine(int horsepower, String type) {
+        this.horsepower = horsepower;
+        this.type = type;
+    }
+    
+    public void start() {
+        System.out.println(type + " engine started (" + horsepower + " HP)");
+    }
+}
+
+// Car class - OWNS Engine
+class Car {
+    private String model;
+    private Engine engine;  // Composition: Car HAS Engine
+    
+    public Car(String model, int hp, String engineType) {
+        this.model = model;
+        // Engine created inside Car
+        this.engine = new Engine(hp, engineType);
+    }
+    
+    public void start() {
+        System.out.println(model + " is starting...");
+        engine.start();
+    }
+    
+    // When Car is destroyed, Engine is also destroyed
+}
+
+public class CarDemo {
+    public static void main(String[] args) {
+        Car car = new Car("Tesla Model 3", 300, "Electric");
+        car.start();
+        
+        // Cannot access engine independently
+        // car.engine is private
+    }
+}
+```
+
+**Output:**
+```
+Tesla Model 3 is starting...
+Electric engine started (300 HP)
+```
+
+---
+
+### Aggregation (Weak Relationship)
+
+**Definition:** A **WEAK** "has-a" relationship where the **child CAN exist** independently of the parent.
+
+**Characteristics:**
+- ✅ Weak ownership
+- ✅ Child has independent lifecycle
+- ✅ If parent destroyed, child survives
+- ✅ Child can be shared among multiple parents
+
+**Real-world examples:**
+- Department → Employees
+- University → Students
+- Team → Players
+- Library → Books
+
+---
+
+#### Aggregation Example 1: Department and Employees
+
+```java
+// Employee class - CAN exist independently
+class Employee {
+    private int id;
+    private String name;
+    
+    public Employee(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+    
+    public String getDetails() {
+        return id + ": " + name;
+    }
+}
+
+// Department class - HAS Employees but doesn't OWN them
+class Department {
+    private String deptName;
+    private List<Employee> employees;  // Aggregation: Dept HAS Employees
+    
+    public Department(String deptName) {
+        this.deptName = deptName;
+        this.employees = new ArrayList<>();
+    }
+    
+    // Add existing employee (not creating new one)
+    public void addEmployee(Employee emp) {
+        employees.add(emp);
+    }
+    
+    public void showEmployees() {
+        System.out.println("Department: " + deptName);
+        for (Employee emp : employees) {
+            System.out.println("  - " + emp.getDetails());
+        }
+    }
+}
+
+public class AggregationDemo {
+    public static void main(String[] args) {
+        // Employees created independently
+        Employee emp1 = new Employee(101, "Alice");
+        Employee emp2 = new Employee(102, "Bob");
+        Employee emp3 = new Employee(103, "Charlie");
+        
+        // Department uses existing employees
+        Department dept = new Department("IT");
+        dept.addEmployee(emp1);
+        dept.addEmployee(emp2);
+        
+        dept.showEmployees();
+        
+        dept = null;  // Department destroyed
+        
+        // Employees still exist!
+        System.out.println("\nEmployees still exist:");
+        System.out.println(emp1.getDetails());
+        System.out.println(emp2.getDetails());
+        System.out.println(emp3.getDetails());
+    }
+}
+```
+
+**Output:**
+```
+Department: IT
+  - 101: Alice
+  - 102: Bob
+
+Employees still exist:
+101: Alice
+102: Bob
+103: Charlie
+```
+
+---
+
+#### Aggregation Example 2: University and Students
+
+```java
+// Student class - CAN exist independently
+class Student {
+    private int rollNo;
+    private String name;
+    
+    public Student(int rollNo, String name) {
+        this.rollNo = rollNo;
+        this.name = name;
+    }
+    
+    public String getInfo() {
+        return rollNo + " - " + name;
+    }
+}
+
+// University class - HAS Students but doesn't OWN them
+class University {
+    private String name;
+    private List<Student> students;  // Aggregation
+    
+    public University(String name) {
+        this.name = name;
+        this.students = new ArrayList<>();
+    }
+    
+    public void enroll(Student student) {
+        students.add(student);
+    }
+    
+    public void showStudents() {
+        System.out.println("University: " + name);
+        for (Student student : students) {
+            System.out.println("  - " + student.getInfo());
+        }
+    }
+}
+
+public class UniversityDemo {
+    public static void main(String[] args) {
+        // Students exist independently
+        Student s1 = new Student(1001, "John");
+        Student s2 = new Student(1002, "Emma");
+        
+        // University enrolls existing students
+        University uni = new University("ABC University");
+        uni.enroll(s1);
+        uni.enroll(s2);
+        
+        uni.showStudents();
+        
+        // Student can join another university too
+        University uni2 = new University("XYZ University");
+        uni2.enroll(s1);  // Same student, different university
+    }
+}
+```
+
+---
+
+### Detailed Comparison
+
+| Aspect | Composition | Aggregation |
+|--------|-------------|-------------|
+| **Relationship Type** | Strong "part-of" | Weak "has-a" |
+| **Ownership** | Strong ownership | Weak ownership |
+| **Lifecycle** | Child depends on parent | Child independent |
+| **Destruction** | Child destroyed with parent | Child survives parent |
+| **Creation** | Child created inside parent | Child created outside |
+| **Sharing** | Child NOT shared | Child can be shared |
+| **UML Diamond** | Filled diamond (◆) | Empty diamond (◇) |
+| **Example** | House → Rooms | Department → Employees |
+| **Code Pattern** | `new Child()` inside parent | Pass existing child to parent |
+| **Memory** | Parent holds child object | Parent holds child reference |
+
+---
+
+### UML Notation
+
+```
+COMPOSITION (Filled Diamond)
+════════════════════════════════════════════════════════════════════
+
+    House ◆────────> Room
+          │
+          │ Rooms are part of House
+          │ Rooms cannot exist without House
+          └─ Strong ownership
+
+
+AGGREGATION (Empty Diamond)
+════════════════════════════════════════════════════════════════════
+
+    Department ◇────────> Employee
+               │
+               │ Department has Employees
+               │ Employees can exist independently
+               └─ Weak ownership
+```
+
+---
+
+### Code Pattern Comparison
+
+#### Composition Pattern
+```java
+class Parent {
+    private Child child;
+    
+    public Parent() {
+        // Create child INSIDE parent
+        this.child = new Child();  // ← Composition
+    }
+}
+```
+
+#### Aggregation Pattern
+```java
+class Parent {
+    private Child child;
+    
+    // Receive child from OUTSIDE
+    public Parent(Child child) {  // ← Aggregation
+        this.child = child;
+    }
+}
+```
+
+---
+
+### 🎯 Interview Questions & Answers
+
+**Q1: What is the difference between Composition and Aggregation?**
+
+**Answer:**
+"Both represent **HAS-A** relationships, but differ in strength:
+
+**Composition (Strong):**
+- Child CANNOT exist without parent
+- If parent destroyed, child destroyed
+- Example: House has Rooms
+
+**Aggregation (Weak):**
+- Child CAN exist independently
+- If parent destroyed, child survives
+- Example: Department has Employees
+
+**Code difference:**
+```java
+// Composition - create child inside
+class House {
+    private Room room = new Room();  // Strong
+}
+
+// Aggregation - receive child from outside
+class Department {
+    public void addEmployee(Employee emp) {  // Weak
+        employees.add(emp);
+    }
+}
+```"
+
+---
+
+**Q2: Give real-world examples of Composition and Aggregation.**
+
+**Answer:**
+
+**Composition Examples:**
+1. Human → Heart (heart can't exist without human)
+2. Car → Engine (engine is part of car)
+3. Book → Pages (pages are part of book)
+4. House → Rooms (rooms are part of house)
+
+**Aggregation Examples:**
+1. School → Students (students exist independently)
+2. Company → Employees (employees exist independently)
+3. Team → Players (players exist independently)
+4. Library → Books (books exist independently)"
+
+---
+
+**Q3: Can you show both Composition and Aggregation in one example?**
+
+**Answer:**
+"Yes! A **Car** example:
+
+```java
+// Engine - Composition (engine is PART OF car)
+class Engine {
+    private int horsepower;
+}
+
+// Driver - Aggregation (driver exists independently)
+class Driver {
+    private String name;
+    private String license;
+}
+
+class Car {
+    private Engine engine;    // Composition ◆
+    private Driver driver;    // Aggregation ◇
+    
+    public Car() {
+        // Engine created inside - Composition
+        this.engine = new Engine();
+    }
+    
+    // Driver passed from outside - Aggregation
+    public void assignDriver(Driver driver) {
+        this.driver = driver;
+    }
+}
+```
+
+**If Car is destroyed:**
+- ❌ Engine is destroyed (Composition)
+- ✅ Driver survives (Aggregation)"
+
+---
+
+**Q4: How do you represent Composition and Aggregation in UML?**
+
+**Answer:**
+"**UML Notation:**
+
+```
+Composition: Parent ◆────────> Child (Filled diamond)
+Aggregation: Parent ◇────────> Child (Empty diamond)
+```
+
+**Example:**
+```
+House ◆────────> Room       (Composition - filled)
+Department ◇────────> Employee  (Aggregation - empty)
+```
+
+The diamond is always on the **container/parent** side."
+
+---
+
+**Q5: Why prefer Composition over Inheritance?**
+
+**Answer:**
+"**Composition over Inheritance** principle because:
+
+1. **Flexibility** - Can change behavior at runtime
+2. **Loose coupling** - Less dependency
+3. **Multiple behaviors** - Can compose multiple objects
+4. **No fragile base class problem** - Changes in parent don't break child
+
+**Example:**
+```java
+// ❌ Inheritance - rigid
+class FlyingCar extends Car {  // Stuck with this relationship
+}
+
+// ✅ Composition - flexible
+class Car {
+    private FlyingAbility flyingAbility;  // Can add/remove
+    
+    public void enableFlying() {
+        this.flyingAbility = new FlyingAbility();
+    }
+}
+```
+
+**Design principle:** 'Favor composition over inheritance' - Gang of Four"
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+**Total Document:** 9 major parts covering complete Java OOP, Advanced concepts, Design Patterns, Security, and Serialization! 🎉
 
