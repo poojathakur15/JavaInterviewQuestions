@@ -4027,14 +4027,4 @@ Feel free to contribute by:
 
 This cheat sheet is provided as-is for educational purposes.
 
----
 
-**Last Updated**: February 2026
-
-**Author**: Technical Content Creator for Interview Preparation
-
-**Target Audience**: Java Developers with 11+ years of experience
-
----
-
-*Good luck with your interviews! 🚀*

@@ -1,2 +1,3 @@
-# JavaInterviewQuestions
-Java-Full-Stack-interview-questions-10+-years-experience
+# Java Full-Stack Interview Questions (3-10+ Years Experience)
+
+> Complete interview preparation guide for Java developers
