@@ -14369,11 +14369,21 @@ List<Integer> from5 = numbers.stream()
 
 ```java
 // Java 17: or() - alternative Optional
+Optional<String> result = Optional.empty()
+    .or(() -> Optional.of("Alternative"));  // Alternative
+
+// Java 17: stream() - convert Optional to Stream
+Optional.of("value")
+    .stream()
+    .map(String::toUpperCase)
+    .forEach(System.out::println);
+```
+
 [⬆️ Back to Table of Contents](#-table-of-contents)
 
 ---
 
-# 🎨 PART 7: DESIGN PATTERNS & ADVANCED FEATURES
+# PART 7: DESIGN PATTERNS & ADVANCED FEATURES
 
 ---
 
