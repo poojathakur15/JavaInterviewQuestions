@@ -4934,17 +4934,6 @@ int poolSize = Runtime.getRuntime().availableProcessors() * (1 + waitTime/comput
 
 ---
 
-**🎯 Quick Interview Tips:**
-
-1. **Always explain with examples** - Interviewers love practical knowledge
-2. **Mention thread safety** - Critical in production code
-3. **Know the difference** - Thread vs Runnable, synchronized vs Lock
-4. **Understand deadlock** - Common interview question
-5. **Be aware of alternatives** - Modern concurrency utilities (Executor, etc.)
-
----
-
----
 
 # 📦 PART 6: CONCURRENT COLLECTIONS & BLOCKING QUEUES
 
