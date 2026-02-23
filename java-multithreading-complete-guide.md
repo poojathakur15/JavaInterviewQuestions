@@ -4944,12 +4944,1151 @@ int poolSize = Runtime.getRuntime().availableProcessors() * (1 + waitTime/comput
 
 ---
 
-**Next sections will cover:**
-- Part 4: Inter-Thread Communication (wait/notify)
-- Part 5: Advanced Concurrency (Executor, Callable, Future)
-- Part 6: Concurrent Collections
-- Part 7: Locks and Synchronizers
-- Part 8: Best Practices & Common Issues
+---
 
-Would you like me to continue with the remaining parts?
+# 📦 PART 6: CONCURRENT COLLECTIONS & BLOCKING QUEUES
+
+---
+
+## 26. BlockingQueue
+
+### What is BlockingQueue?
+
+**BlockingQueue** is a thread-safe queue interface that supports operations that **wait** for the queue to become non-empty when retrieving an element, and **wait** for space to become available when storing an element.
+
+**Key Characteristics:**
+- ✅ Thread-safe (no need for external synchronization)
+- ✅ Blocking operations (automatic waiting)
+- ✅ Bounded or unbounded capacity
+- ✅ Supports producer-consumer pattern
+- ✅ Null elements not allowed
+
+---
+
+### BlockingQueue Methods
+
+| Method | Throws Exception | Returns Special Value | Blocks | Times Out |
+|--------|-----------------|----------------------|--------|-----------|
+| **Insert** | `add(e)` | `offer(e)` | `put(e)` | `offer(e, time, unit)` |
+| **Remove** | `remove()` | `poll()` | `take()` | `poll(time, unit)` |
+| **Examine** | `element()` | `peek()` | N/A | N/A |
+
+**Method Behavior:**
+
+1. **Throws Exception**: `add()`, `remove()`, `element()`
+   - Throws exception if operation cannot be performed immediately
+
+2. **Special Value**: `offer()`, `poll()`, `peek()`
+   - Returns `true`/`false` or `null` instead of throwing exception
+
+3. **Blocks**: `put()`, `take()`
+   - Waits indefinitely until operation succeeds
+
+4. **Times Out**: `offer(e, timeout)`, `poll(timeout)`
+   - Waits for specified time, then gives up
+
+---
+
+### BlockingQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class BlockingQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        BlockingQueue<String> queue = new ArrayBlockingQueue<>(3);
+        
+        // Producer thread
+        Thread producer = new Thread(() -> {
+            try {
+                queue.put("Item-1");
+                System.out.println("Produced: Item-1");
+                
+                queue.put("Item-2");
+                System.out.println("Produced: Item-2");
+                
+                queue.put("Item-3");
+                System.out.println("Produced: Item-3");
+                
+                // This will block until space is available
+                queue.put("Item-4");
+                System.out.println("Produced: Item-4");
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        // Consumer thread
+        Thread consumer = new Thread(() -> {
+            try {
+                Thread.sleep(2000); // Wait before consuming
+                
+                String item = queue.take();
+                System.out.println("Consumed: " + item);
+                
+                item = queue.take();
+                System.out.println("Consumed: " + item);
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        producer.start();
+        consumer.start();
+        
+        producer.join();
+        consumer.join();
+    }
+}
+```
+
+**Output:**
+```
+Produced: Item-1
+Produced: Item-2
+Produced: Item-3
+(waits 2 seconds...)
+Consumed: Item-1
+Consumed: Item-2
+Produced: Item-4
+```
+
+**Explanation:**
+- Queue capacity is 3
+- After producing 3 items, `put("Item-4")` blocks
+- Once consumer removes items, producer continues
+
+---
+
+## 27. ArrayBlockingQueue vs LinkedBlockingQueue
+
+### ArrayBlockingQueue
+
+**Definition:** Bounded blocking queue backed by an **array**.
+
+**Key Features:**
+- ✅ Fixed capacity (must specify at creation)
+- ✅ FIFO ordering
+- ✅ Single lock for both put and take operations
+- ✅ Fair or unfair access policy
+- ✅ Better performance for high contention
+
+**When to Use:**
+- Known maximum capacity
+- Need to prevent memory exhaustion
+- High contention scenarios
+
+---
+
+### ArrayBlockingQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class ArrayBlockingQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        // Bounded queue with capacity 5
+        BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(5);
+        
+        // Producer
+        Thread producer = new Thread(() -> {
+            try {
+                for (int i = 1; i <= 10; i++) {
+                    queue.put(i);
+                    System.out.println("Produced: " + i + " | Queue size: " + queue.size());
+                    Thread.sleep(100);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        // Consumer
+        Thread consumer = new Thread(() -> {
+            try {
+                Thread.sleep(1000); // Slow consumer
+                
+                for (int i = 1; i <= 10; i++) {
+                    int item = queue.take();
+                    System.out.println("Consumed: " + item + " | Queue size: " + queue.size());
+                    Thread.sleep(500);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        producer.start();
+        consumer.start();
+        
+        producer.join();
+        consumer.join();
+        
+        System.out.println("All tasks completed!");
+    }
+}
+```
+
+**Output:**
+```
+Produced: 1 | Queue size: 1
+Produced: 2 | Queue size: 2
+Produced: 3 | Queue size: 3
+Produced: 4 | Queue size: 4
+Produced: 5 | Queue size: 5
+(Producer blocks, queue is full)
+Consumed: 1 | Queue size: 4
+Produced: 6 | Queue size: 5
+Consumed: 2 | Queue size: 4
+Produced: 7 | Queue size: 5
+...
+All tasks completed!
+```
+
+---
+
+### LinkedBlockingQueue
+
+**Definition:** Optionally bounded blocking queue backed by a **linked list**.
+
+**Key Features:**
+- ✅ Optionally bounded (can be unbounded)
+- ✅ FIFO ordering
+- ✅ Two separate locks (one for put, one for take) - better throughput
+- ✅ Higher throughput under concurrent access
+- ✅ More memory overhead (linked nodes)
+
+**When to Use:**
+- Need higher throughput
+- Don't know maximum capacity in advance
+- Low to medium contention
+
+---
+
+### LinkedBlockingQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class LinkedBlockingQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        // Optionally bounded with capacity 100
+        BlockingQueue<Task> queue = new LinkedBlockingQueue<>(100);
+        
+        // Or unbounded:
+        // BlockingQueue<Task> queue = new LinkedBlockingQueue<>();
+        
+        // Multiple producers
+        for (int i = 1; i <= 3; i++) {
+            final int producerId = i;
+            new Thread(() -> {
+                try {
+                    for (int j = 1; j <= 5; j++) {
+                        Task task = new Task("P" + producerId + "-T" + j);
+                        queue.put(task);
+                        System.out.println("Producer " + producerId + " produced: " + task.name);
+                        Thread.sleep(100);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        }
+        
+        // Multiple consumers
+        for (int i = 1; i <= 2; i++) {
+            final int consumerId = i;
+            new Thread(() -> {
+                try {
+                    while (true) {
+                        Task task = queue.take();
+                        System.out.println("Consumer " + consumerId + " consumed: " + task.name);
+                        Thread.sleep(200);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        }
+        
+        Thread.sleep(5000);
+        System.out.println("Demo completed!");
+    }
+}
+
+class Task {
+    String name;
+    
+    Task(String name) {
+        this.name = name;
+    }
+}
+```
+
+**Output:**
+```
+Producer 1 produced: P1-T1
+Producer 2 produced: P2-T1
+Producer 3 produced: P3-T1
+Consumer 1 consumed: P1-T1
+Consumer 2 consumed: P2-T1
+Producer 1 produced: P1-T2
+Producer 2 produced: P2-T2
+Consumer 1 consumed: P3-T1
+...
+Demo completed!
+```
+
+---
+
+### ArrayBlockingQueue vs LinkedBlockingQueue - Comparison
+
+| Feature | ArrayBlockingQueue | LinkedBlockingQueue |
+|---------|-------------------|-------------------|
+| **Structure** | Array-based | Linked list-based |
+| **Capacity** | ✅ Always bounded | ✅ Optionally bounded |
+| **Locks** | Single lock | Two locks (put/take) |
+| **Throughput** | Lower | Higher |
+| **Memory** | Less overhead | More overhead (node objects) |
+| **Fairness** | Optional fair mode | Always unfair |
+| **Use Case** | High contention | High throughput needed |
+| **Iterator** | Strongly consistent | Weakly consistent |
+
+**Summary:**
+- Use **ArrayBlockingQueue** when you need bounded capacity and fairness
+- Use **LinkedBlockingQueue** when you need better throughput with many producers/consumers
+
+---
+
+## 28. PriorityBlockingQueue
+
+### What is PriorityBlockingQueue?
+
+**PriorityBlockingQueue** is an **unbounded** blocking queue that uses priority ordering. Elements are ordered by their natural ordering or by a custom `Comparator`.
+
+**Key Characteristics:**
+- ✅ Unbounded capacity (never blocks on put)
+- ✅ Priority-based ordering (not FIFO)
+- ✅ Thread-safe
+- ✅ Blocks only on take() when queue is empty
+- ✅ Uses binary heap internally
+- ✅ Null elements not allowed
+
+---
+
+### PriorityBlockingQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class PriorityBlockingQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        // Natural ordering (Priority class implements Comparable)
+        BlockingQueue<Task> queue = new PriorityBlockingQueue<>();
+        
+        // Producer - adds tasks with different priorities
+        Thread producer = new Thread(() -> {
+            try {
+                queue.put(new Task("Low priority task", 3));
+                System.out.println("Added: Low priority task (3)");
+                
+                queue.put(new Task("High priority task", 1));
+                System.out.println("Added: High priority task (1)");
+                
+                queue.put(new Task("Medium priority task", 2));
+                System.out.println("Added: Medium priority task (2)");
+                
+                queue.put(new Task("Critical task", 0));
+                System.out.println("Added: Critical task (0)");
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        // Consumer - retrieves tasks by priority
+        Thread consumer = new Thread(() -> {
+            try {
+                Thread.sleep(1000); // Let producer add all tasks
+                
+                while (!queue.isEmpty()) {
+                    Task task = queue.take();
+                    System.out.println("Processing: " + task);
+                    Thread.sleep(500);
+                }
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        producer.start();
+        consumer.start();
+        
+        producer.join();
+        consumer.join();
+        
+        System.out.println("All tasks processed!");
+    }
+}
+
+class Task implements Comparable<Task> {
+    String name;
+    int priority; // Lower number = higher priority
+    
+    Task(String name, int priority) {
+        this.name = name;
+        this.priority = priority;
+    }
+    
+    @Override
+    public int compareTo(Task other) {
+        return Integer.compare(this.priority, other.priority);
+    }
+    
+    @Override
+    public String toString() {
+        return name + " (Priority: " + priority + ")";
+    }
+}
+```
+
+**Output:**
+```
+Added: Low priority task (3)
+Added: High priority task (1)
+Added: Medium priority task (2)
+Added: Critical task (0)
+Processing: Critical task (Priority: 0)
+Processing: High priority task (Priority: 1)
+Processing: Medium priority task (Priority: 2)
+Processing: Low priority task (Priority: 3)
+All tasks processed!
+```
+
+**Explanation:**
+- Tasks are processed by priority, not insertion order
+- Lower priority number = higher priority
+- Critical task (0) processed first, despite being added last
+
+---
+
+## 29. DelayQueue
+
+### What is DelayQueue?
+
+**DelayQueue** is an **unbounded** blocking queue where elements can only be taken when their **delay has expired**.
+
+**Key Characteristics:**
+- ✅ Unbounded capacity
+- ✅ Elements must implement `Delayed` interface
+- ✅ Ordered by delay time (shortest delay first)
+- ✅ Element available only after its delay expires
+- ✅ Thread-safe
+- ✅ Used for scheduling tasks
+
+---
+
+### DelayQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class DelayQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        DelayQueue<DelayedTask> queue = new DelayQueue<>();
+        
+        // Add tasks with different delays
+        long now = System.currentTimeMillis();
+        
+        queue.put(new DelayedTask("Task 1", now + 3000)); // 3 seconds
+        queue.put(new DelayedTask("Task 2", now + 1000)); // 1 second
+        queue.put(new DelayedTask("Task 3", now + 5000)); // 5 seconds
+        queue.put(new DelayedTask("Task 4", now + 2000)); // 2 seconds
+        
+        System.out.println("All tasks added at: " + now);
+        System.out.println("Waiting for tasks to become available...\n");
+        
+        // Consumer thread
+        while (!queue.isEmpty()) {
+            DelayedTask task = queue.take(); // Blocks until delay expires
+            System.out.println(System.currentTimeMillis() + " - Retrieved: " + task.name);
+        }
+        
+        System.out.println("\nAll tasks completed!");
+    }
+}
+
+class DelayedTask implements Delayed {
+    String name;
+    long executeTime; // Time when task should be executed
+    
+    DelayedTask(String name, long executeTime) {
+        this.name = name;
+        this.executeTime = executeTime;
+    }
+    
+    @Override
+    public long getDelay(TimeUnit unit) {
+        long diff = executeTime - System.currentTimeMillis();
+        return unit.convert(diff, TimeUnit.MILLISECONDS);
+    }
+    
+    @Override
+    public int compareTo(Delayed o) {
+        return Long.compare(this.executeTime, ((DelayedTask) o).executeTime);
+    }
+    
+    @Override
+    public String toString() {
+        return name + " (delay: " + getDelay(TimeUnit.MILLISECONDS) + "ms)";
+    }
+}
+```
+
+**Output:**
+```
+All tasks added at: 1708776543210
+Waiting for tasks to become available...
+
+1708776544210 - Retrieved: Task 2
+1708776545210 - Retrieved: Task 4
+1708776546210 - Retrieved: Task 1
+1708776548210 - Retrieved: Task 3
+
+All tasks completed!
+```
+
+**Explanation:**
+- Tasks retrieved in order of delay expiration, not insertion order
+- Task 2 (1 sec delay) retrieved first
+- `take()` blocks until each task's delay expires
+
+---
+
+## 30. SynchronousQueue
+
+### What is SynchronousQueue?
+
+**SynchronousQueue** is a blocking queue where each **insert** operation must wait for a corresponding **remove** operation by another thread, and vice versa.
+
+**Key Characteristics:**
+- ✅ Zero capacity (no storage)
+- ✅ Direct handoff between threads
+- ✅ No peek() operation (nothing to peek at)
+- ✅ Used by `Executors.newCachedThreadPool()`
+- ✅ Useful for handoff designs
+- ✅ Fair or unfair mode
+
+---
+
+### SynchronousQueue Example
+
+```java
+import java.util.concurrent.*;
+
+class SynchronousQueueDemo {
+    public static void main(String[] args) throws InterruptedException {
+        SynchronousQueue<String> queue = new SynchronousQueue<>();
+        
+        // Producer thread
+        Thread producer = new Thread(() -> {
+            try {
+                String[] items = {"Item-1", "Item-2", "Item-3"};
+                
+                for (String item : items) {
+                    System.out.println("Producer trying to put: " + item);
+                    queue.put(item); // Blocks until consumer takes it
+                    System.out.println("Producer successfully handed off: " + item);
+                }
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        // Consumer thread
+        Thread consumer = new Thread(() -> {
+            try {
+                for (int i = 0; i < 3; i++) {
+                    Thread.sleep(2000); // Slow consumer
+                    System.out.println("Consumer ready to take item...");
+                    String item = queue.take(); // Blocks until producer provides
+                    System.out.println("Consumer received: " + item);
+                }
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        producer.start();
+        Thread.sleep(500); // Let producer start first
+        consumer.start();
+        
+        producer.join();
+        consumer.join();
+        
+        System.out.println("\nQueue size: " + queue.size()); // Always 0
+    }
+}
+```
+
+**Output:**
+```
+Producer trying to put: Item-1
+(Producer blocks, waiting for consumer)
+Consumer ready to take item...
+Producer successfully handed off: Item-1
+Consumer received: Item-1
+Producer trying to put: Item-2
+(Producer blocks again)
+Consumer ready to take item...
+Producer successfully handed off: Item-2
+Consumer received: Item-2
+Producer trying to put: Item-3
+Consumer ready to take item...
+Producer successfully handed off: Item-3
+Consumer received: Item-3
+
+Queue size: 0
+```
+
+**Explanation:**
+- Producer blocks on `put()` until consumer calls `take()`
+- No internal storage - direct handoff
+- Queue size is always 0
+
+---
+
+## 31. Exchanger
+
+### What is Exchanger?
+
+**Exchanger** is a synchronization point where **two threads** can exchange objects. Each thread presents an object to the other thread and receives the partner's object in return.
+
+**Key Characteristics:**
+- ✅ Synchronization point for exactly 2 threads
+- ✅ Bidirectional data exchange
+- ✅ Thread-safe
+- ✅ Blocks until both threads reach exchange point
+- ✅ Useful for pipeline designs
+
+---
+
+### Exchanger Example
+
+```java
+import java.util.concurrent.*;
+
+class ExchangerDemo {
+    public static void main(String[] args) {
+        Exchanger<String> exchanger = new Exchanger<>();
+        
+        // Thread 1
+        Thread thread1 = new Thread(() -> {
+            try {
+                String myData = "Data from Thread-1";
+                System.out.println("Thread-1 has: " + myData);
+                System.out.println("Thread-1 waiting to exchange...");
+                
+                // Exchange data - blocks until Thread-2 arrives
+                String receivedData = exchanger.exchange(myData);
+                
+                System.out.println("Thread-1 received: " + receivedData);
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        // Thread 2
+        Thread thread2 = new Thread(() -> {
+            try {
+                Thread.sleep(2000); // Arrive late
+                
+                String myData = "Data from Thread-2";
+                System.out.println("Thread-2 has: " + myData);
+                System.out.println("Thread-2 ready to exchange...");
+                
+                // Exchange data - blocks until Thread-1 arrives
+                String receivedData = exchanger.exchange(myData);
+                
+                System.out.println("Thread-2 received: " + receivedData);
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        thread1.start();
+        thread2.start();
+        
+        try {
+            thread1.join();
+            thread2.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        System.out.println("\nExchange completed!");
+    }
+}
+```
+
+**Output:**
+```
+Thread-1 has: Data from Thread-1
+Thread-1 waiting to exchange...
+(Thread-1 blocks for 2 seconds)
+Thread-2 has: Data from Thread-2
+Thread-2 ready to exchange...
+Thread-1 received: Data from Thread-2
+Thread-2 received: Data from Thread-1
+
+Exchange completed!
+```
+
+**Explanation:**
+- Thread-1 arrives first and blocks at `exchange()`
+- Thread-2 arrives after 2 seconds
+- Both exchange data simultaneously
+- Both receive each other's data
+
+---
+
+## 32. Busy Spinning (Spin-Wait)
+
+### What is Busy Spinning?
+
+**Busy spinning** (or spin-waiting) is a technique where a thread repeatedly checks a condition in a tight loop instead of using blocking mechanisms like `wait()` or `sleep()`.
+
+**Characteristics:**
+- ✅ Thread actively checks condition (doesn't release CPU)
+- ✅ Very low latency (no context switch)
+- ✅ High CPU usage
+- ✅ Used in high-performance scenarios
+
+---
+
+### When to Use Busy Spinning?
+
+**✅ Use Busy Spinning When:**
+1. Wait time is **very short** (nanoseconds to microseconds)
+2. Need **ultra-low latency** (e.g., high-frequency trading)
+3. Context switching cost is too high
+4. Running on dedicated CPU cores
+
+**❌ Avoid Busy Spinning When:**
+1. Wait time is long (wastes CPU)
+2. Limited CPU resources
+3. Sharing CPU with other applications
+4. Power efficiency is important
+
+---
+
+### Busy Spinning Example
+
+```java
+class BusySpinningDemo {
+    private volatile boolean ready = false;
+    private String message;
+    
+    public static void main(String[] args) throws InterruptedException {
+        BusySpinningDemo demo = new BusySpinningDemo();
+        
+        // Consumer thread - busy spinning
+        Thread consumer = new Thread(() -> {
+            System.out.println("Consumer: Waiting for message (busy spinning)...");
+            long start = System.nanoTime();
+            
+            // Busy spin until ready
+            while (!demo.ready) {
+                // Actively checking - burning CPU
+                // No context switch overhead
+            }
+            
+            long end = System.nanoTime();
+            System.out.println("Consumer: Received message: " + demo.message);
+            System.out.println("Consumer: Wait time: " + (end - start) + " nanoseconds");
+        });
+        
+        // Producer thread
+        Thread producer = new Thread(() -> {
+            try {
+                Thread.sleep(100); // Simulate work
+                System.out.println("Producer: Preparing message...");
+                demo.message = "Hello from Producer!";
+                demo.ready = true; // Signal consumer
+                System.out.println("Producer: Message ready!");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        consumer.start();
+        Thread.sleep(10); // Ensure consumer starts first
+        producer.start();
+        
+        consumer.join();
+        producer.join();
+    }
+}
+```
+
+**Output:**
+```
+Consumer: Waiting for message (busy spinning)...
+Producer: Preparing message...
+Producer: Message ready!
+Consumer: Received message: Hello from Producer!
+Consumer: Wait time: 102437584 nanoseconds
+```
+
+---
+
+### Optimized Busy Spinning with Thread.onSpinWait()
+
+Java 9 introduced `Thread.onSpinWait()` - a hint to the JVM that the thread is in a spin-wait loop.
+
+```java
+class OptimizedBusySpinning {
+    private volatile boolean ready = false;
+    private String message;
+    
+    public static void main(String[] args) throws InterruptedException {
+        OptimizedBusySpinning demo = new OptimizedBusySpinning();
+        
+        // Consumer with optimized spinning
+        Thread consumer = new Thread(() -> {
+            System.out.println("Consumer: Optimized busy spinning...");
+            
+            while (!demo.ready) {
+                Thread.onSpinWait(); // JVM hint - can reduce power, help HyperThreading
+            }
+            
+            System.out.println("Consumer: Received: " + demo.message);
+        });
+        
+        // Producer
+        Thread producer = new Thread(() -> {
+            try {
+                Thread.sleep(100);
+                demo.message = "Optimized message!";
+                demo.ready = true;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        consumer.start();
+        producer.start();
+        
+        consumer.join();
+        producer.join();
+    }
+}
+```
+
+**Output:**
+```
+Consumer: Optimized busy spinning...
+Consumer: Received: Optimized message!
+```
+
+**Benefits of `Thread.onSpinWait()`:**
+- Reduces power consumption
+- Improves performance on HyperThreading CPUs
+- Allows other threads on same core to make progress
+
+---
+
+### Comparison: Busy Spinning vs Blocking
+
+| Aspect | Busy Spinning | Blocking (wait/notify) |
+|--------|--------------|----------------------|
+| **CPU Usage** | ⚠️ High (100% while waiting) | ✅ Low (released) |
+| **Latency** | ✅ Very low (nanoseconds) | ⚠️ Higher (context switch) |
+| **Context Switch** | ✅ None | ⚠️ Yes (expensive) |
+| **Power Efficiency** | ❌ Poor | ✅ Good |
+| **Use Case** | Short waits (<1μs) | Long waits (>1ms) |
+| **CPU Cores** | Need dedicated cores | Can share cores |
+
+---
+
+## 33. join() vs wait() - The Differences
+
+### Key Differences
+
+| Aspect | `join()` | `wait()` |
+|--------|---------|---------|
+| **Purpose** | Wait for **thread** to complete | Wait for **notification** from another thread |
+| **Belongs to** | `Thread` class | `Object` class |
+| **Usage** | Thread coordination | Inter-thread communication |
+| **Lock Release** | Does NOT release any lock | Releases monitor lock |
+| **Who calls** | Any thread waiting for another thread | Thread holding object's lock |
+| **Wakeup** | Automatic (when thread dies) | Manual (`notify()`/`notifyAll()`) |
+| **Synchronized** | No synchronization needed | Must be in synchronized block |
+| **Return** | When target thread completes | When notified or interrupted |
+
+---
+
+### join() - Detailed Explanation
+
+**Purpose:** Wait for a thread to complete execution.
+
+```java
+class JoinExample {
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            System.out.println("Worker: Starting work...");
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Worker: Work completed!");
+        });
+        
+        worker.start();
+        
+        System.out.println("Main: Waiting for worker to complete...");
+        worker.join(); // Main thread waits here
+        System.out.println("Main: Worker finished, continuing...");
+    }
+}
+```
+
+**Output:**
+```
+Worker: Starting work...
+Main: Waiting for worker to complete...
+(3 seconds pass)
+Worker: Work completed!
+Main: Worker finished, continuing...
+```
+
+**Key Points:**
+- `join()` makes current thread wait until the target thread completes
+- Does **NOT** require synchronization
+- Does **NOT** release any locks held by calling thread
+
+---
+
+### wait() - Detailed Explanation
+
+**Purpose:** Inter-thread communication - wait for notification.
+
+```java
+class WaitExample {
+    private static final Object lock = new Object();
+    private static boolean dataReady = false;
+    
+    public static void main(String[] args) {
+        Thread consumer = new Thread(() -> {
+            synchronized (lock) {
+                System.out.println("Consumer: Waiting for data...");
+                try {
+                    while (!dataReady) {
+                        lock.wait(); // Releases lock and waits
+                    }
+                    System.out.println("Consumer: Data received, processing...");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        Thread producer = new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                synchronized (lock) {
+                    System.out.println("Producer: Data ready!");
+                    dataReady = true;
+                    lock.notify(); // Wake up consumer
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        
+        consumer.start();
+        producer.start();
+    }
+}
+```
+
+**Output:**
+```
+Consumer: Waiting for data...
+(2 seconds pass)
+Producer: Data ready!
+Consumer: Data received, processing...
+```
+
+**Key Points:**
+- `wait()` **MUST** be in synchronized block
+- **Releases** the monitor lock
+- Waits until `notify()` or `notifyAll()` is called
+
+---
+
+### Side-by-Side Comparison Example
+
+```java
+class JoinVsWaitComparison {
+    private static final Object lock = new Object();
+    private static boolean ready = false;
+    
+    public static void main(String[] args) throws InterruptedException {
+        System.out.println("=== Demonstrating join() ===\n");
+        demonstrateJoin();
+        
+        System.out.println("\n=== Demonstrating wait() ===\n");
+        demonstrateWait();
+    }
+    
+    private static void demonstrateJoin() throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            System.out.println("Worker: Processing...");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Worker: Done!");
+        });
+        
+        worker.start();
+        System.out.println("Main: Calling join() - no synchronization needed");
+        worker.join(); // Wait for worker to finish
+        System.out.println("Main: Worker completed, continuing...");
+    }
+    
+    private static void demonstrateWait() {
+        Thread consumer = new Thread(() -> {
+            synchronized (lock) {
+                System.out.println("Consumer: Calling wait() - must be synchronized");
+                try {
+                    while (!ready) {
+                        lock.wait(); // Releases lock
+                    }
+                    System.out.println("Consumer: Notified, continuing...");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        Thread producer = new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                synchronized (lock) {
+                    System.out.println("Producer: Setting ready and calling notify()");
+                    ready = true;
+                    lock.notify();
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        
+        consumer.start();
+        producer.start();
+    }
+}
+```
+
+**Output:**
+```
+=== Demonstrating join() ===
+
+Main: Calling join() - no synchronization needed
+Worker: Processing...
+Worker: Done!
+Main: Worker completed, continuing...
+
+=== Demonstrating wait() ===
+
+Consumer: Calling wait() - must be synchronized
+Producer: Setting ready and calling notify()
+Consumer: Notified, continuing...
+```
+
+---
+
+### Common Interview Question: Can join() release locks?
+
+**Answer: NO!**
+
+```java
+class JoinDoesNotReleaseLock {
+    private static final Object lock = new Object();
+    
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            synchronized (lock) {
+                System.out.println("Worker: Acquired lock, trying to work...");
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Worker: Releasing lock");
+            }
+        });
+        
+        worker.start();
+        Thread.sleep(100); // Let worker acquire lock first
+        
+        synchronized (lock) {
+            System.out.println("Main: Acquired lock, calling join()");
+            worker.join(); // ⚠️ DEADLOCK! join() doesn't release lock
+            System.out.println("Main: This will never print!");
+        }
+    }
+}
+```
+
+**Output:**
+```
+Worker: Acquired lock, trying to work...
+Main: Acquired lock, calling join()
+(DEADLOCK - program hangs forever)
+```
+
+**Explanation:**
+- Worker holds `lock` and sleeps
+- Main acquires `lock` later and calls `worker.join()`
+- `join()` does NOT release `lock`, so main waits forever
+- Worker can't finish because it needs `lock` (which main holds)
+- **DEADLOCK!**
+
+**Fix: Don't call join() while holding locks needed by the joined thread!**
+
+---
+
+### Summary Table
+
+| Feature | `join()` | `wait()` |
+|---------|---------|---------|
+| Class | `Thread` | `Object` |
+| Synchronization | ❌ Not required | ✅ **Required** |
+| Lock Release | ❌ No | ✅ **Yes** |
+| Purpose | Wait for thread completion | Wait for notification |
+| Wakeup | Automatic (thread dies) | Manual (`notify()`) |
+| Use Case | Thread coordination | Producer-Consumer |
+| Timeout | `join(timeout)` | `wait(timeout)` |
+
+---
+
+[⬆️ Back to Table of Contents](#-table-of-contents)
+
+---
+
+**End of Part 6** - Concurrent Collections & Blocking Queues Complete! ✅
+
+---
 
