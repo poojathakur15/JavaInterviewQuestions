@@ -895,6 +895,422 @@ Downloading from: url3
 
 ---
 
+## 5A. Can We Override the start() Method?
+
+### Short Answer
+
+**Yes, you CAN override start(), but you SHOULD NOT!**
+
+Overriding `start()` defeats the entire purpose of multithreading because it prevents the creation of a new thread.
+
+---
+
+### What Happens Normally?
+
+When you call `thread.start()`:
+
+1. **JVM creates a new thread** (a new call stack)
+2. **Thread enters RUNNABLE state**
+3. **JVM internally calls run() method** in the new thread
+4. **Concurrent execution** happens
+
+```java
+// Normal flow
+MyThread t = new MyThread();
+t.start(); // ✅ Creates new thread → calls run() in new thread
+```
+
+---
+
+### What Happens When You Override start()?
+
+If you override `start()` without calling `super.start()`, **NO new thread is created!**
+
+```java
+class WrongThread extends Thread {
+    @Override
+    public void start() {
+        // ❌ Overridden without super.start()
+        System.out.println("start() overridden - No new thread created!");
+        run(); // Called in SAME thread (main thread)
+    }
+    
+    @Override
+    public void run() {
+        System.out.println("Running in thread: " + Thread.currentThread().getName());
+    }
+}
+
+class OverrideStartWrong {
+    public static void main(String[] args) {
+        WrongThread t = new WrongThread();
+        
+        System.out.println("Main thread: " + Thread.currentThread().getName());
+        t.start(); // Looks like starting thread, but...
+        System.out.println("After start() call");
+    }
+}
+```
+
+**Output:**
+```
+Main thread: main
+start() overridden - No new thread created!
+Running in thread: main
+After start() call
+```
+
+**❌ Problem:** Everything runs in the **main thread**! No concurrency!
+
+---
+
+### Correct Way to Override start() (If You Must)
+
+If you have a valid reason to override `start()`, **always call super.start()**:
+
+```java
+class CustomThread extends Thread {
+    @Override
+    public void start() {
+        System.out.println("Custom start() called");
+        // Add your custom logic here (before thread starts)
+        
+        super.start(); // ✅ MUST call this to create new thread!
+        
+        // Add logic after thread starts (runs in calling thread)
+        System.out.println("Thread has been started");
+    }
+    
+    @Override
+    public void run() {
+        System.out.println("Running in thread: " + Thread.currentThread().getName());
+    }
+}
+
+class OverrideStartCorrect {
+    public static void main(String[] args) {
+        System.out.println("Main thread: " + Thread.currentThread().getName());
+        
+        CustomThread t = new CustomThread();
+        t.start(); // Now creates new thread properly
+        
+        System.out.println("Main continues...");
+    }
+}
+```
+
+**Output:**
+```
+Main thread: main
+Custom start() called
+Thread has been started
+Main continues...
+Running in thread: Thread-0
+```
+
+**✅ Correct:** New thread is created because of `super.start()`
+
+---
+
+### Comparison: start() vs run()
+
+```java
+class StartVsRun {
+    public static void main(String[] args) {
+        Thread t1 = new Thread(() -> {
+            System.out.println("Thread-1 executing in: " + 
+                             Thread.currentThread().getName());
+        });
+        
+        Thread t2 = new Thread(() -> {
+            System.out.println("Thread-2 executing in: " + 
+                             Thread.currentThread().getName());
+        });
+        
+        System.out.println("=== Using start() - Creates New Thread ===");
+        t1.start(); // ✅ New thread created
+        
+        try { Thread.sleep(100); } catch (InterruptedException e) {}
+        
+        System.out.println("\n=== Calling run() Directly - No New Thread ===");
+        t2.run(); // ❌ No new thread - runs in main thread
+    }
+}
+```
+
+**Output:**
+```
+=== Using start() - Creates New Thread ===
+Thread-1 executing in: Thread-0
+
+=== Calling run() Directly - No New Thread ===
+Thread-2 executing in: main
+```
+
+**Key Difference:**
+- `start()` → Creates **new thread** → JVM calls `run()` in that thread
+- `run()` → **No new thread** → Just a normal method call
+
+---
+
+### What If You Call start() Twice?
+
+```java
+class DoubleStartDemo {
+    public static void main(String[] args) {
+        Thread t = new Thread(() -> {
+            System.out.println("Thread running: " + Thread.currentThread().getName());
+        });
+        
+        t.start(); // First call - OK
+        System.out.println("First start() succeeded");
+        
+        try {
+            Thread.sleep(100);
+            t.start(); // Second call - Exception!
+        } catch (IllegalThreadStateException e) {
+            System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+}
+```
+
+**Output:**
+```
+Thread running: Thread-0
+First start() succeeded
+❌ Error: Thread already started
+```
+
+**Rule:** `start()` can be called **only ONCE** per thread object. Second call throws `IllegalThreadStateException`.
+
+---
+
+### Real-World Example: Adding Logging to start()
+
+**Valid Use Case:** Add logging/monitoring when threads start
+
+```java
+class LoggingThread extends Thread {
+    private static int threadCount = 0;
+    private int threadId;
+    
+    public LoggingThread(Runnable target, String name) {
+        super(target, name);
+    }
+    
+    @Override
+    public void start() {
+        threadId = ++threadCount;
+        System.out.println("🚀 Starting thread #" + threadId + 
+                         " (" + getName() + ") at " + System.currentTimeMillis());
+        
+        super.start(); // ✅ Create actual thread
+        
+        System.out.println("✅ Thread #" + threadId + " started successfully");
+    }
+    
+    @Override
+    public void run() {
+        super.run();
+        System.out.println("🏁 Thread #" + threadId + " completed");
+    }
+}
+
+class LoggingThreadDemo {
+    public static void main(String[] args) throws InterruptedException {
+        LoggingThread t1 = new LoggingThread(() -> {
+            System.out.println("   Task 1 executing...");
+            try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        }, "Worker-1");
+        
+        LoggingThread t2 = new LoggingThread(() -> {
+            System.out.println("   Task 2 executing...");
+            try { Thread.sleep(500); } catch (InterruptedException e) {}
+        }, "Worker-2");
+        
+        t1.start();
+        Thread.sleep(100);
+        t2.start();
+        
+        t1.join();
+        t2.join();
+    }
+}
+```
+
+**Output:**
+```
+🚀 Starting thread #1 (Worker-1) at 1708777234567
+✅ Thread #1 started successfully
+   Task 1 executing...
+🚀 Starting thread #2 (Worker-2) at 1708777234670
+✅ Thread #2 started successfully
+   Task 2 executing...
+🏁 Thread #2 completed
+🏁 Thread #1 completed
+```
+
+---
+
+### Common Mistake: Overriding start() for Custom Logic
+
+```java
+// ❌ WRONG: Trying to add custom behavior
+class WrongApproach extends Thread {
+    @Override
+    public void start() {
+        System.out.println("Initializing thread...");
+        // Forgot super.start() - BIG MISTAKE!
+        run(); // Runs in calling thread, NOT a new thread
+    }
+    
+    @Override
+    public void run() {
+        for (int i = 0; i < 3; i++) {
+            System.out.println("Count: " + i + " in " + 
+                             Thread.currentThread().getName());
+        }
+    }
+}
+
+// ✅ CORRECT: Use initialization in constructor or separate method
+class CorrectApproach extends Thread {
+    public CorrectApproach() {
+        System.out.println("Initializing thread...");
+        // Initialization logic here
+    }
+    
+    @Override
+    public void run() {
+        for (int i = 0; i < 3; i++) {
+            System.out.println("Count: " + i + " in " + 
+                             Thread.currentThread().getName());
+        }
+    }
+}
+
+class ComparisonDemo {
+    public static void main(String[] args) {
+        System.out.println("=== Wrong Approach ===");
+        WrongApproach wrong = new WrongApproach();
+        wrong.start();
+        
+        System.out.println("\n=== Correct Approach ===");
+        CorrectApproach correct = new CorrectApproach();
+        correct.start();
+    }
+}
+```
+
+**Output:**
+```
+=== Wrong Approach ===
+Initializing thread...
+Count: 0 in main
+Count: 1 in main
+Count: 2 in main
+
+=== Correct Approach ===
+Initializing thread...
+Count: 0 in Thread-0
+Count: 1 in Thread-0
+Count: 2 in Thread-0
+```
+
+---
+
+### Visual Representation
+
+**Normal start() Flow:**
+```
+Main Thread                         New Thread (Thread-0)
+    │                                       │
+    │ thread.start()                        │
+    ├──────────────────────────────────────►│
+    │                                       │
+    │                                 JVM creates thread
+    │                                       │
+    │                                 JVM calls run()
+    │                                       │
+    │ (continues)                      (executes run())
+    │                                       │
+    ▼                                       ▼
+```
+
+**Overridden start() without super.start():**
+```
+Main Thread
+    │
+    │ thread.start()
+    │
+    │ (overridden start() called)
+    │
+    │ run() called directly
+    │
+    │ (NO new thread created!)
+    │
+    ▼
+```
+
+---
+
+### Interview Q&A
+
+**Q1: Can we override start() method?**
+**A:** Yes, but you should call `super.start()` to create the actual thread. Without it, no new thread is created.
+
+**Q2: What happens if we don't call super.start()?**
+**A:** The `run()` method executes in the calling thread (e.g., main thread), defeating the purpose of multithreading.
+
+**Q3: Why would we override start()?**
+**A:** Valid reasons include:
+- Adding logging/monitoring
+- Performing initialization checks
+- Tracking thread lifecycle
+- Adding security checks
+
+**Q4: What's the difference between start() and run()?**
+**A:**
+- `start()`: Creates a new thread and JVM calls `run()` in that thread
+- `run()`: Just a normal method call in the current thread
+
+**Q5: Can we call start() multiple times on the same thread?**
+**A:** No! It throws `IllegalThreadStateException` on the second call.
+
+---
+
+### Best Practices
+
+✅ **DO:**
+- Override `run()` for thread logic
+- Call `super.start()` if you override `start()`
+- Use `start()` to begin thread execution
+
+❌ **DON'T:**
+- Override `start()` without calling `super.start()`
+- Call `run()` directly (use `start()` instead)
+- Call `start()` more than once on same thread
+- Add heavy logic in overridden `start()` before `super.start()`
+
+---
+
+### Summary
+
+| Scenario | Result | New Thread? | Recommended? |
+|----------|--------|-------------|--------------|
+| `t.start()` (normal) | Creates new thread, JVM calls run() | ✅ Yes | ✅ Yes |
+| `t.run()` (direct call) | Method call in current thread | ❌ No | ❌ Never |
+| Override `start()` with `super.start()` | Creates new thread + custom logic | ✅ Yes | ⚠️ If needed |
+| Override `start()` without `super.start()` | No new thread created | ❌ No | ❌ Never |
+| `t.start()` twice | IllegalThreadStateException | ❌ N/A | ❌ Never |
+
+---
+
+**🎯 Key Takeaway:** You CAN override `start()`, but you MUST call `super.start()` to create the actual thread. Otherwise, you lose all benefits of multithreading!
+
+---
+
 # Part 2: Thread Management
 
 ## 6. Thread Priority
@@ -1294,6 +1710,696 @@ All threads completed!
 | **Lock Release** | ❌ No | ❌ No | ❌ No |
 | **State** | TIMED_WAITING | RUNNABLE | WAITING/TIMED_WAITING |
 | **Guarantee** | ✅ Yes | ❌ No (just hint) | ✅ Yes |
+
+---
+
+### sleep() vs yield() - Detailed Comparison
+
+#### Visual State Diagram
+
+**sleep() - Thread State Changes:**
+```
+Thread Running
+    ↓
+thread.sleep(1000)
+    ↓
+[TIMED_WAITING] ──→ Guaranteed to wait 1000ms
+    ↓
+Time expires
+    ↓
+[RUNNABLE] ──→ Ready to run (waits for CPU)
+    ↓
+Scheduler assigns CPU
+    ↓
+[RUNNING]
+```
+
+**yield() - Thread State Changes:**
+```
+Thread Running
+    ↓
+thread.yield()
+    ↓
+[RUNNABLE] ──→ Gives up CPU voluntarily (maybe!)
+    ↓
+Scheduler may or may not give CPU to another thread
+    ↓
+[RUNNING] or stays [RUNNABLE]
+```
+
+---
+
+#### Key Difference #1: Guaranteed Pause vs Hint
+
+**sleep() - Guaranteed Pause:**
+```java
+class SleepGuaranteed {
+    public static void main(String[] args) {
+        System.out.println("Start: " + System.currentTimeMillis());
+        
+        try {
+            Thread.sleep(2000); // GUARANTEED 2-second pause
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        System.out.println("End: " + System.currentTimeMillis());
+        System.out.println("Elapsed: ~2000ms (guaranteed)");
+    }
+}
+```
+
+**Output:**
+```
+Start: 1708777890123
+End: 1708777892125
+Elapsed: ~2000ms (guaranteed)
+```
+
+**yield() - Just a Hint (No Guarantee):**
+```java
+class YieldNoGuarantee {
+    public static void main(String[] args) {
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("Thread-1: " + i);
+                Thread.yield(); // Hint only - may be ignored!
+            }
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("Thread-2: " + i);
+            }
+        });
+        
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+**Output (Varies by Run):**
+```
+Thread-1: 0
+Thread-1: 1
+Thread-1: 2
+Thread-1: 3
+Thread-1: 4
+Thread-2: 0
+Thread-2: 1
+Thread-2: 2
+Thread-2: 3
+Thread-2: 4
+```
+**Note:** yield() may have no effect! Threads might run sequentially anyway.
+
+---
+
+#### Key Difference #2: Thread State
+
+**sleep() Changes State:**
+```java
+class SleepStateDemo {
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            try {
+                System.out.println("Before sleep: " + Thread.currentThread().getState());
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        
+        worker.start();
+        Thread.sleep(100); // Let worker thread start
+        
+        System.out.println("During sleep: " + worker.getState());
+        
+        worker.join();
+        System.out.println("After sleep: " + worker.getState());
+    }
+}
+```
+
+**Output:**
+```
+Before sleep: RUNNABLE
+During sleep: TIMED_WAITING
+After sleep: TERMINATED
+```
+
+**yield() Doesn't Change State:**
+```java
+class YieldStateDemo {
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            System.out.println("Before yield: " + Thread.currentThread().getState());
+            Thread.yield();
+            System.out.println("After yield: " + Thread.currentThread().getState());
+        });
+        
+        worker.start();
+        worker.join();
+    }
+}
+```
+
+**Output:**
+```
+Before yield: RUNNABLE
+After yield: RUNNABLE
+```
+**Note:** State remains RUNNABLE throughout!
+
+---
+
+#### Key Difference #3: Time-Based vs Voluntary
+
+**sleep() - Time-Based Pause:**
+```java
+class TimedPauseExample {
+    public static void main(String[] args) {
+        Thread counter = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Count: " + i + " at " + 
+                                 System.currentTimeMillis());
+                try {
+                    Thread.sleep(1000); // Exactly 1 second between counts
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        counter.start();
+    }
+}
+```
+
+**Output:**
+```
+Count: 1 at 1708777890123
+Count: 2 at 1708777891125
+Count: 3 at 1708777892127
+Count: 4 at 1708777893129
+Count: 5 at 1708777894131
+```
+**Note:** Consistent ~1000ms intervals!
+
+**yield() - Voluntary CPU Release:**
+```java
+class VoluntaryReleaseExample {
+    public static void main(String[] args) throws InterruptedException {
+        Thread polite = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Polite thread: " + i);
+                Thread.yield(); // "After you, other threads!"
+            }
+        });
+        
+        Thread eager = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Eager thread: " + i);
+                // No yield - keeps running
+            }
+        });
+        
+        polite.start();
+        eager.start();
+        
+        polite.join();
+        eager.join();
+    }
+}
+```
+
+**Output (One Possible Run):**
+```
+Polite thread: 1
+Eager thread: 1
+Eager thread: 2
+Eager thread: 3
+Eager thread: 4
+Eager thread: 5
+Polite thread: 2
+Polite thread: 3
+Polite thread: 4
+Polite thread: 5
+```
+**Note:** Eager thread may dominate because polite thread yields!
+
+---
+
+#### Key Difference #4: Exception Handling
+
+**sleep() - Checked Exception:**
+```java
+class SleepException {
+    public static void main(String[] args) {
+        Thread t = new Thread(() -> {
+            try {
+                Thread.sleep(2000); // MUST handle InterruptedException
+            } catch (InterruptedException e) {
+                System.out.println("Sleep interrupted!");
+                Thread.currentThread().interrupt(); // Restore interrupt status
+            }
+        });
+        
+        t.start();
+        
+        try {
+            Thread.sleep(500);
+            t.interrupt(); // Interrupt the sleeping thread
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**Output:**
+```
+Sleep interrupted!
+```
+
+**yield() - No Exception:**
+```java
+class YieldNoException {
+    public static void main(String[] args) {
+        Thread t = new Thread(() -> {
+            Thread.yield(); // No try-catch needed!
+            System.out.println("Yield completed (no exception handling)");
+        });
+        
+        t.start();
+    }
+}
+```
+
+**Output:**
+```
+Yield completed (no exception handling)
+```
+
+---
+
+#### Key Difference #5: Use Cases
+
+**When to Use sleep():**
+
+```java
+// ✅ Use Case 1: Polling/Waiting
+class PollingExample {
+    private static volatile boolean dataReady = false;
+    
+    public static void main(String[] args) throws InterruptedException {
+        Thread consumer = new Thread(() -> {
+            while (!dataReady) {
+                System.out.println("Waiting for data...");
+                try {
+                    Thread.sleep(500); // Poll every 500ms
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            System.out.println("Data is ready! Processing...");
+        });
+        
+        consumer.start();
+        
+        // Producer prepares data
+        Thread.sleep(2000);
+        dataReady = true;
+    }
+}
+```
+
+**Output:**
+```
+Waiting for data...
+Waiting for data...
+Waiting for data...
+Waiting for data...
+Data is ready! Processing...
+```
+
+```java
+// ✅ Use Case 2: Rate Limiting
+class RateLimitingExample {
+    public static void main(String[] args) {
+        Thread apiCaller = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("API Call #" + i + " at " + System.currentTimeMillis());
+                try {
+                    Thread.sleep(1000); // Rate limit: 1 call per second
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        apiCaller.start();
+    }
+}
+```
+
+**Output:**
+```
+API Call #1 at 1708777890123
+API Call #2 at 1708777891125
+API Call #3 at 1708777892127
+API Call #4 at 1708777893129
+API Call #5 at 1708777894131
+```
+
+**When to Use yield():**
+
+```java
+// ✅ Use Case 1: Fairness in CPU Sharing
+class FairCPUSharing {
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker1 = new Thread(() -> {
+            int sum = 0;
+            for (int i = 0; i < 1000; i++) {
+                sum += i;
+                if (i % 100 == 0) {
+                    Thread.yield(); // Give others a chance
+                }
+            }
+            System.out.println("Worker-1 sum: " + sum);
+        });
+        
+        Thread worker2 = new Thread(() -> {
+            int product = 1;
+            for (int i = 1; i <= 10; i++) {
+                product *= i;
+                Thread.yield(); // Be cooperative
+            }
+            System.out.println("Worker-2 product: " + product);
+        });
+        
+        worker1.start();
+        worker2.start();
+        
+        worker1.join();
+        worker2.join();
+    }
+}
+```
+
+**Output:**
+```
+Worker-2 product: 3628800
+Worker-1 sum: 499500
+```
+
+```java
+// ✅ Use Case 2: Cooperative Multitasking
+class CooperativeTask {
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+            for (char c = 'A'; c <= 'E'; c++) {
+                System.out.print(c + " ");
+                Thread.yield(); // Let others print
+            }
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.print(i + " ");
+                Thread.yield(); // Let others print
+            }
+        });
+        
+        t1.start();
+        t2.start();
+        
+        t1.join();
+        t2.join();
+    }
+}
+```
+
+**Output (One Possible Run):**
+```
+A 1 B 2 C 3 D 4 E 5
+```
+
+---
+
+#### Performance Comparison
+
+**sleep() Performance Cost:**
+```java
+class SleepPerformance {
+    public static void main(String[] args) {
+        long start = System.nanoTime();
+        
+        for (int i = 0; i < 10; i++) {
+            try {
+                Thread.sleep(1); // Even 1ms sleep has overhead
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        long end = System.nanoTime();
+        System.out.println("10 sleeps of 1ms each took: " + 
+                         (end - start) / 1_000_000 + "ms");
+    }
+}
+```
+
+**Output:**
+```
+10 sleeps of 1ms each took: 15ms
+```
+**Note:** Actual time > requested time due to context switching overhead!
+
+**yield() Performance Cost:**
+```java
+class YieldPerformance {
+    public static void main(String[] args) {
+        long start = System.nanoTime();
+        
+        for (int i = 0; i < 10000; i++) {
+            Thread.yield(); // Very lightweight
+        }
+        
+        long end = System.nanoTime();
+        System.out.println("10000 yields took: " + 
+                         (end - start) / 1_000_000 + "ms");
+    }
+}
+```
+
+**Output:**
+```
+10000 yields took: 2ms
+```
+**Note:** Much faster than sleep()! May be ignored entirely.
+
+---
+
+#### Comprehensive Comparison Table
+
+| Aspect | sleep() | yield() |
+|--------|---------|---------|
+| **Method Type** | `static void sleep(long millis)` | `static void yield()` |
+| **Purpose** | Pause thread for specific time | Give CPU to equal/higher priority threads |
+| **State Change** | ✅ RUNNABLE → TIMED_WAITING | ❌ Stays RUNNABLE |
+| **Guarantee** | ✅ Always pauses for specified time | ❌ Scheduler may ignore |
+| **Exception** | ✅ Throws InterruptedException | ❌ No exception |
+| **Lock Release** | ❌ Keeps locks | ❌ Keeps locks |
+| **Precision** | ✅ Time-based (milliseconds) | ❌ No time control |
+| **CPU Usage** | ✅ Releases CPU completely | ⚠️ May get CPU back immediately |
+| **Context Switch** | ✅ Always switches | ⚠️ May or may not switch |
+| **Platform Dependent** | ❌ No | ✅ Yes (very!) |
+| **Overhead** | ⚠️ Higher (context switch cost) | ✅ Lower (hint only) |
+| **Use When** | Need timed pause, polling | Want fairness, cooperative tasks |
+| **Interrupt Handling** | ✅ Can be interrupted | ❌ Cannot be interrupted |
+| **Thread Priority** | ❌ Ignores priority | ✅ Respects priority (maybe) |
+
+---
+
+#### Interview Questions & Answers
+
+**Q1: What's the main difference between sleep() and yield()?**
+
+**A:** 
+- `sleep()` **guarantees** the thread will pause for the specified time and moves to TIMED_WAITING state
+- `yield()` is just a **hint** to the scheduler suggesting it's willing to give up CPU, but may be completely ignored. Thread stays in RUNNABLE state.
+
+**Q2: Can we use sleep(0) and yield() interchangeably?**
+
+**A:** No!
+- `sleep(0)` causes a context switch but thread may immediately get CPU back
+- `yield()` suggests giving CPU to threads of equal or higher priority only
+- `sleep(0)` changes state to TIMED_WAITING (briefly), `yield()` doesn't change state
+
+**Q3: Which is more expensive - sleep() or yield()?**
+
+**A:** `sleep()` is more expensive:
+- Requires kernel-level context switch
+- State change overhead
+- Timer management overhead
+- `yield()` is just a hint, may have zero overhead if ignored
+
+**Q4: When should I use sleep() vs yield()?**
+
+**A:**
+
+**Use sleep():**
+- Need guaranteed pause time
+- Implementing polling/waiting logic
+- Rate limiting
+- Animation/UI updates with timing
+- Simulating delays in testing
+
+**Use yield():**
+- Want cooperative multitasking
+- Fairness among similar-priority threads
+- CPU-intensive loop that should share CPU
+- Non-critical scheduling hints
+
+**Q5: Does yield() make my program faster or slower?**
+
+**A:** **Neither guaranteed!**
+- May make it *slower* if threads keep yielding unnecessarily
+- May make it *faster* by allowing other threads to progress
+- May have *no effect* if scheduler ignores it
+- Platform and JVM-dependent behavior
+
+**Q6: Can sleep() or yield() release locks?**
+
+**A:** **NO! Both methods keep all locks held by the thread.**
+- If you need to release locks while waiting, use `wait()` instead
+- Common misconception - neither releases synchronized locks
+
+**Q7: Why does sleep(0) exist?**
+
+**A:** `sleep(0)` is used to:
+- Trigger context switch without actual delay
+- Allow other threads to run
+- Different from yield() - sleep(0) may give CPU to lower-priority threads too
+
+---
+
+#### Common Mistakes
+
+**❌ Mistake 1: Using yield() for timing**
+```java
+// WRONG!
+for (int i = 0; i < 1000; i++) {
+    doWork();
+    Thread.yield(); // This is NOT a delay!
+}
+```
+
+**✅ Correct:**
+```java
+for (int i = 0; i < 1000; i++) {
+    doWork();
+    Thread.sleep(10); // Use sleep for timing
+}
+```
+
+---
+
+**❌ Mistake 2: Expecting yield() to always work**
+```java
+// WRONG! May not alternate at all!
+Thread t1 = new Thread(() -> {
+    for (int i = 0; i < 5; i++) {
+        System.out.println("T1: " + i);
+        Thread.yield(); // May be ignored!
+    }
+});
+```
+
+**✅ Correct - Use proper synchronization if order matters:**
+```java
+Object lock = new Object();
+// Use wait/notify for guaranteed coordination
+```
+
+---
+
+**❌ Mistake 3: Relying on yield() for thread safety**
+```java
+// WRONG! yield() doesn't provide atomicity
+int counter = 0;
+Thread t = new Thread(() -> {
+    for (int i = 0; i < 1000; i++) {
+        counter++; // Race condition!
+        Thread.yield();
+    }
+});
+```
+
+**✅ Correct:**
+```java
+AtomicInteger counter = new AtomicInteger();
+// Or use synchronized block
+```
+
+---
+
+#### Best Practices
+
+**✅ DO:**
+- Use `sleep()` when you need **guaranteed timing**
+- Use `yield()` for **cooperative scheduling** in CPU-intensive loops
+- Handle `InterruptedException` properly with `sleep()`
+- Use `Thread.sleep(0)` if you want to trigger context switch to any thread
+
+**❌ DON'T:**
+- Don't use `yield()` for timing or synchronization
+- Don't rely on `yield()` behavior across platforms
+- Don't use `sleep()` in tight loops (use wait/notify instead)
+- Don't ignore `InterruptedException` from `sleep()`
+
+---
+
+#### Summary Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    sleep() vs yield()                         │
+├──────────────────────────────────────────────────────────────┤
+│                                                               │
+│  sleep(1000):                    yield():                    │
+│                                                               │
+│  Thread Running                  Thread Running              │
+│      ↓                              ↓                        │
+│  TIMED_WAITING                   RUNNABLE                    │
+│  (guaranteed 1s)                 (hint only)                 │
+│      ↓                              ↓                        │
+│  Wait exactly 1000ms             May or may not              │
+│      ↓                           give up CPU                 │
+│  RUNNABLE                            ↓                       │
+│      ↓                           RUNNABLE/RUNNING            │
+│  Wait for scheduler                  ↓                       │
+│      ↓                           Continues execution         │
+│  RUNNING                                                     │
+│                                                               │
+│  Use Case:                       Use Case:                   │
+│  • Timed delays                  • Fair CPU sharing          │
+│  • Polling                       • Cooperative tasks         │
+│  • Rate limiting                 • Hints to scheduler        │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+**🎯 Key Takeaway:**  
+- Use **sleep()** when you need **control over timing** (guaranteed pause)
+- Use **yield()** when you want to be **"polite" to other threads** (hint only, no guarantee)
+- **Never use yield() for timing or synchronization!**
+
+---
 
 ### Complete Real-World Example
 
