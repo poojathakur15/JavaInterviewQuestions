@@ -14,52 +14,57 @@
 3. [Thread Lifecycle](#3-thread-lifecycle)
 4. [Creating Threads](#4-creating-threads)
 5. [Thread Class vs Runnable Interface](#5-thread-class-vs-runnable-interface)
+6. [Difference between Process and Thread in Java](#6-difference-between-process-and-thread-in-java)
+7. [Does Thread Implement Their Own Stack?](#7-does-thread-implement-their-own-stack)
+8. [Thread Behavior is Unpredictable](#8-thread-behavior-is-unpredictable)
+9. [When Threads Are Not Lightweight Process](#9-when-threads-are-not-lightweight-process)
+10. [Ensuring Threads End in Order](#10-ensuring-threads-end-in-order)
 
 ### Part 2: Thread Management
-6. [Thread Priority](#6-thread-priority)
-7. [Thread Sleep, Yield, and Join](#7-thread-sleep-yield-and-join)
-8. [Daemon Threads](#8-daemon-threads)
-9. [Thread Naming](#9-thread-naming)
-10. [Thread Groups](#10-thread-groups)
+11. [Thread Priority](#11-thread-priority)
+12. [Thread Sleep, Yield, and Join](#12-thread-sleep-yield-and-join)
+13. [Daemon Threads](#13-daemon-threads)
+14. [Thread Naming](#14-thread-naming)
+15. [Thread Groups](#15-thread-groups)
 
 ### Part 3: Synchronization
-11. [What is Synchronization?](#11-what-is-synchronization)
-12. [Synchronized Method](#12-synchronized-method)
-13. [Synchronized Block](#13-synchronized-block)
-14. [Static Synchronization](#14-static-synchronization)
-15. [Deadlock](#15-deadlock)
+16. [What is Synchronization?](#16-what-is-synchronization)
+17. [Synchronized Method](#17-synchronized-method)
+18. [Synchronized Block](#18-synchronized-block)
+19. [Static Synchronization](#19-static-synchronization)
+20. [Deadlock](#20-deadlock)
 
 ### Part 4: Inter-Thread Communication
-16. [wait(), notify(), and notifyAll()](#16-wait-notify-and-notifyall)
-17. [Producer-Consumer Problem](#17-producer-consumer-problem)
-18. [Thread Communication Best Practices](#18-thread-communication-best-practices)
+21. [wait(), notify(), and notifyAll()](#21-wait-notify-and-notifyall)
+22. [Producer-Consumer Problem](#22-producer-consumer-problem)
+23. [Thread Communication Best Practices](#23-thread-communication-best-practices)
 
 ### Part 5: Advanced Concurrency
-19. [Volatile Keyword](#19-volatile-keyword)
-20. [Atomic Variables](#20-atomic-variables)
-21. [Thread Local](#21-thread-local)
-22. [Executor Framework](#22-executor-framework)
-23. [Callable and Future](#23-callable-and-future)
+24. [Volatile Keyword](#24-volatile-keyword)
+25. [Atomic Variables](#25-atomic-variables)
+26. [Thread Local](#26-thread-local)
+27. [Executor Framework](#27-executor-framework)
+28. [Callable and Future](#28-callable-and-future)
 
 ### Part 6: Concurrent Collections
-24. [ConcurrentHashMap](#24-concurrenthashmap)
-25. [CopyOnWriteArrayList](#25-copyonwritearraylist)
-26. [BlockingQueue](#26-blockingqueue)
-27. [Thread-Safe Collections](#27-thread-safe-collections)
+29. [ConcurrentHashMap](#29-concurrenthashmap)
+30. [CopyOnWriteArrayList](#30-copyonwritearraylist)
+31. [BlockingQueue](#31-blockingqueue)
+32. [Thread-Safe Collections](#32-thread-safe-collections)
 
 ### Part 7: Locks and Synchronizers
-28. [ReentrantLock](#28-reentrantlock)
-29. [ReadWriteLock](#29-readwritelock)
-30. [Semaphore](#30-semaphore)
-31. [CountDownLatch](#31-countdownlatch)
-32. [CyclicBarrier](#32-cyclicbarrier)
-33. [Exchanger](#33-exchanger)
+33. [ReentrantLock](#33-reentrantlock)
+34. [ReadWriteLock](#34-readwritelock)
+35. [Semaphore](#35-semaphore)
+36. [CountDownLatch](#36-countdownlatch)
+37. [CyclicBarrier](#37-cyclicbarrier)
+38. [Exchanger](#38-exchanger)
 
 ### Part 8: Best Practices & Patterns
-34. [Thread Pool Best Practices](#34-thread-pool-best-practices)
-35. [Common Multithreading Issues](#35-common-multithreading-issues)
-36. [Thread Safety Strategies](#36-thread-safety-strategies)
-37. [Performance Optimization](#37-performance-optimization)
+39. [Thread Pool Best Practices](#39-thread-pool-best-practices)
+40. [Common Multithreading Issues](#40-common-multithreading-issues)
+41. [Thread Safety Strategies](#41-thread-safety-strategies)
+42. [Performance Optimization](#42-performance-optimization)
 
 ---
 
@@ -1311,9 +1316,1577 @@ Main Thread
 
 ---
 
+## 6. Difference between Process and Thread in Java
+
+### Detailed Analysis
+
+While we covered Process vs Thread basics in section 2, this section provides an in-depth comparison with Java-specific details.
+
+### Memory Architecture
+
+#### Process Memory Layout
+```
+┌──────────────────────────────────────────────┐
+│         PROCESS (Separate JVM)               │
+├──────────────────────────────────────────────┤
+│  Code Segment        (Text Section)          │
+│  Data Segment        (Global/Static vars)    │
+│  Heap Memory         (Dynamic allocation)    │
+│  Stack Memory        (Method calls)          │
+│  Process Control Block (PCB)                 │
+└──────────────────────────────────────────────┘
+     Each process has its own memory space
+```
+
+#### Thread Memory Layout (Within Same Process)
+```
+┌──────────────────────────────────────────────┐
+│         PROCESS (Single JVM)                 │
+├──────────────────────────────────────────────┤
+│  SHARED BY ALL THREADS:                      │
+│  ├─ Code Segment                             │
+│  ├─ Data Segment (Static variables)          │
+│  └─ Heap Memory (Objects)                    │
+│                                               │
+│  THREAD-SPECIFIC (NOT Shared):               │
+│  Thread-1: [Stack] [PC] [Registers]          │
+│  Thread-2: [Stack] [PC] [Registers]          │
+│  Thread-3: [Stack] [PC] [Registers]          │
+└──────────────────────────────────────────────┘
+```
+
+### Comprehensive Comparison
+
+| Aspect | Process | Thread |
+|--------|---------|--------|
+| **Definition** | Independent execution instance of a program | Lightweight execution unit within a process |
+| **Memory Space** | Separate address space | Shares process address space |
+| **Heap Memory** | Own heap | Shared heap with other threads |
+| **Stack Memory** | Own stack | Own stack (thread-specific) |
+| **Code Segment** | Own copy | Shared with other threads |
+| **Data Segment** | Own data segment | Shared data segment |
+| **Creation Time** | Slow (100x slower than thread) | Fast |
+| **Context Switch** | Expensive (requires OS kernel) | Cheaper (within same process) |
+| **Communication** | IPC (Pipes, Sockets, Shared Memory) | Direct (shared memory, no IPC needed) |
+| **Overhead** | High memory and CPU overhead | Low overhead (lightweight) |
+| **Isolation** | Fully isolated | Not isolated (share resources) |
+| **Crash Impact** | Doesn't affect other processes | Can crash entire process |
+| **Security** | More secure (isolated) | Less secure (shared memory) |
+| **Resource Sharing** | Difficult | Easy |
+| **Synchronization** | Not required | Required (to avoid race conditions) |
+| **JVM Instance** | Separate JVM for each process | Single JVM for all threads |
+
+### Java Code Example
+
+```java
+// Process Example - Creating separate JVM process
+public class ProcessExample {
+    public static void main(String[] args) throws Exception {
+        // Creating a new Java process
+        ProcessBuilder builder = new ProcessBuilder(
+            "java", "-cp", ".", "ChildProcess"
+        );
+        
+        Process process = builder.start();
+        System.out.println("Parent Process ID: " + ProcessHandle.current().pid());
+        System.out.println("Child Process ID: " + process.pid());
+        System.out.println("Child is alive: " + process.isAlive());
+        
+        // Wait for process to complete
+        int exitCode = process.waitFor();
+        System.out.println("Child process exited with code: " + exitCode);
+        
+        // Processes have separate memory - cannot directly share variables
+    }
+}
+
+class ChildProcess {
+    public static void main(String[] args) {
+        System.out.println("Child process running in PID: " + 
+                          ProcessHandle.current().pid());
+    }
+}
+```
+
+```java
+// Thread Example - Threads within same JVM process
+public class ThreadExample {
+    // Shared variable - accessible by all threads
+    static int sharedCounter = 0;
+    
+    public static void main(String[] args) throws InterruptedException {
+        System.out.println("Main thread in process: " + 
+                          ProcessHandle.current().pid());
+        
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                sharedCounter++; // Accessing shared memory
+            }
+            System.out.println("Thread-1 in same process: " + 
+                              ProcessHandle.current().pid());
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                sharedCounter++; // Accessing same shared memory
+            }
+            System.out.println("Thread-2 in same process: " + 
+                              ProcessHandle.current().pid());
+        });
+        
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        
+        System.out.println("Shared Counter: " + sharedCounter);
+        // All threads run in SAME process - can share variables directly
+    }
+}
+```
+
+### Key Differences in Java Context
+
+**1. Creation & Termination:**
+- **Process:** `ProcessBuilder`, `Runtime.exec()` - creates new JVM
+- **Thread:** `new Thread()`, `start()` - within existing JVM
+
+**2. Memory Sharing:**
+- **Process:** No sharing - must use IPC mechanisms
+- **Thread:** Direct sharing - static/instance variables accessible
+
+**3. Performance Impact:**
+- **Process:** Heavy - new JVM startup overhead
+- **Thread:** Light - reuses existing JVM infrastructure
+
+---
+
+## 7. Does Thread Implement Their Own Stack?
+
+### Answer: YES ✅ (IMPORTANT)
+
+Each thread in Java **maintains its own runtime stack** (also called call stack or execution stack). This is a fundamental concept in multithreading.
+
+### Thread Stack Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    JVM PROCESS                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  SHARED MEMORY (All Threads Share):                        │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  Method Area (Class data, static variables)           │ │
+│  │  Heap (Objects, Instance variables)                   │ │
+│  └───────────────────────────────────────────────────────┘ │
+│                                                             │
+│  THREAD-SPECIFIC MEMORY (Not Shared):                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │  Thread-1    │  │  Thread-2    │  │  Thread-3    │    │
+│  ├──────────────┤  ├──────────────┤  ├──────────────┤    │
+│  │ Stack Frame  │  │ Stack Frame  │  │ Stack Frame  │    │
+│  │ ┌──────────┐ │  │ ┌──────────┐ │  │ ┌──────────┐ │    │
+│  │ │ method3()│ │  │ │ method2()│ │  │ │ methodX()│ │    │
+│  │ ├──────────┤ │  │ ├──────────┤ │  │ ├──────────┤ │    │
+│  │ │ method2()│ │  │ │ method1()│ │  │ │ methodY()│ │    │
+│  │ ├──────────┤ │  │ └──────────┘ │  │ ├──────────┤ │    │
+│  │ │ method1()│ │  │              │  │ │ methodZ()│ │    │
+│  │ └──────────┘ │  │              │  │ └──────────┘ │    │
+│  │              │  │              │  │              │    │
+│  │ PC Register  │  │ PC Register  │  │ PC Register  │    │
+│  │ Native Stack │  │ Native Stack │  │ Native Stack │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### What is Stored in Thread Stack?
+
+Each thread stack contains **Stack Frames**, where each frame stores:
+
+1. **Local Variables** - Method parameters and local variables
+2. **Partial Results** - Intermediate calculation results
+3. **Method Return Values** - Values to be returned
+4. **Return Addresses** - Where to return after method completes
+5. **Operand Stack** - For JVM bytecode operations
+
+### Stack Frame Structure
+
+```
+┌─────────────────────────────────────────┐
+│        STACK FRAME (for one method)     │
+├─────────────────────────────────────────┤
+│  Local Variable Array                   │
+│  ├─ this reference (for instance method)│
+│  ├─ method parameters                   │
+│  └─ local variables                     │
+├─────────────────────────────────────────┤
+│  Operand Stack                          │
+│  └─ temporary values for computation    │
+├─────────────────────────────────────────┤
+│  Frame Data                             │
+│  ├─ constant pool reference             │
+│  ├─ return address                      │
+│  └─ exception table                     │
+└─────────────────────────────────────────┘
+```
+
+### Proof with Code Example
+
+```java
+public class ThreadStackDemo {
+    public static void main(String[] args) {
+        // Main thread has its own stack
+        System.out.println("Main Thread: " + Thread.currentThread().getName());
+        
+        Thread t1 = new Thread(() -> {
+            int localVar1 = 100; // Stored in Thread-1's stack
+            method1(localVar1);
+        }, "Thread-1");
+        
+        Thread t2 = new Thread(() -> {
+            int localVar2 = 200; // Stored in Thread-2's stack (separate)
+            method1(localVar2);
+        }, "Thread-2");
+        
+        t1.start();
+        t2.start();
+    }
+    
+    static void method1(int x) {
+        int y = x * 2; // y stored in calling thread's stack
+        System.out.println(Thread.currentThread().getName() + 
+                          " - method1: x=" + x + ", y=" + y);
+        method2(y);
+    }
+    
+    static void method2(int z) {
+        int result = z + 10; // result stored in calling thread's stack
+        System.out.println(Thread.currentThread().getName() + 
+                          " - method2: z=" + z + ", result=" + result);
+        
+        // Print stack trace - shows this thread's call stack
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        System.out.println(Thread.currentThread().getName() + " Stack:");
+        for (StackTraceElement element : stack) {
+            System.out.println("  at " + element);
+        }
+    }
+}
+```
+
+**Output:**
+```
+Main Thread: main
+Thread-1 - method1: x=100, y=200
+Thread-1 - method2: z=200, result=210
+Thread-1 Stack:
+  at java.lang.Thread.getStackTrace(Thread.java)
+  at ThreadStackDemo.method2(ThreadStackDemo.java:28)
+  at ThreadStackDemo.method1(ThreadStackDemo.java:21)
+  at ThreadStackDemo.lambda$main$0(ThreadStackDemo.java:12)
+  at java.lang.Thread.run(Thread.java)
+Thread-2 - method1: x=200, y=400
+Thread-2 - method2: z=400, result=410
+Thread-2 Stack:
+  at java.lang.Thread.getStackTrace(Thread.java)
+  at ThreadStackDemo.method2(ThreadStackDemo.java:28)
+  at ThreadStackDemo.method1(ThreadStackDemo.java:21)
+  at ThreadStackDemo.lambda$main$1(ThreadStackDemo.java:17)
+  at java.lang.Thread.run(Thread.java)
+```
+
+### How Thread Stack Works?
+
+**1. Stack Allocation:**
+- JVM allocates a **private runtime stack** when thread is created
+- Default stack size: typically **1 MB** (can be configured with `-Xss`)
+- Each method call pushes a new **stack frame**
+- Method return pops the **stack frame**
+
+**2. Stack Size Configuration:**
+```bash
+# Set thread stack size to 512KB
+java -Xss512k MyProgram
+
+# Set thread stack size to 2MB
+java -Xss2m MyProgram
+```
+
+**3. StackOverflowError:**
+```java
+public class StackOverflowDemo {
+    static int count = 0;
+    
+    public static void recursiveMethod() {
+        count++;
+        recursiveMethod(); // Infinite recursion
+    }
+    
+    public static void main(String[] args) {
+        try {
+            recursiveMethod();
+        } catch (StackOverflowError e) {
+            System.out.println("Stack overflow after " + count + " calls");
+            System.out.println("Each thread has limited stack size!");
+        }
+    }
+}
+```
+
+**Output:**
+```
+Stack overflow after 15239 calls
+Each thread has limited stack size!
+```
+
+### Why Each Thread Needs Its Own Stack?
+
+✅ **Reason 1: Independent Execution**
+- Each thread executes different methods independently
+- Needs separate space to track method calls
+
+✅ **Reason 2: Local Variable Isolation**
+- Local variables are thread-safe automatically
+- Each thread has its own copy in its stack
+
+✅ **Reason 3: Method Call Tracking**
+- Each thread maintains its own call hierarchy
+- Enables independent stack traces for debugging
+
+✅ **Reason 4: Return Address Management**
+- Each thread needs to know where to return after method completes
+- Different threads can be at different points in execution
+
+### Stack vs Heap: What Goes Where?
+
+```java
+public class StackVsHeapDemo {
+    // Static variable - stored in Method Area (shared)
+    static int staticVar = 100;
+    
+    // Instance variable - stored in Heap (shared)
+    int instanceVar = 200;
+    
+    public void demonstrateStackVsHeap() {
+        // Local primitive - stored in Thread's STACK (not shared)
+        int localPrimitive = 300;
+        
+        // Local reference - reference stored in STACK
+        // Object itself stored in HEAP (shared)
+        String localObject = new String("Hello");
+        
+        // Array reference - reference in STACK, array in HEAP
+        int[] localArray = new int[10];
+        
+        System.out.println("Thread: " + Thread.currentThread().getName());
+        System.out.println("Local Primitive (Stack): " + localPrimitive);
+        System.out.println("Local Object Reference (Stack): " + localObject);
+        System.out.println("Actual Object (Heap): " + localObject);
+    }
+    
+    public static void main(String[] args) {
+        StackVsHeapDemo demo = new StackVsHeapDemo(); // demo ref in stack, object in heap
+        
+        Thread t1 = new Thread(() -> demo.demonstrateStackVsHeap(), "Thread-1");
+        Thread t2 = new Thread(() -> demo.demonstrateStackVsHeap(), "Thread-2");
+        
+        t1.start();
+        t2.start();
+        
+        // Each thread has own stack, but shares heap objects
+    }
+}
+```
+
+### Memory Diagram: Stack vs Heap
+
+```
+THREAD-1 STACK:          THREAD-2 STACK:          SHARED HEAP:
+┌──────────────┐         ┌──────────────┐         ┌──────────────────┐
+│ localPrim=300│         │ localPrim=300│         │ demo object      │
+│ localObj ────┼────┐    │ localObj ────┼────┐    │ instanceVar=200  │
+│ demo     ────┼───┐│    │ demo     ────┼───┐│    ├──────────────────┤
+└──────────────┘   ││    └──────────────┘   ││    │ String "Hello"   │◄──┐
+                   ││                       ││    │ (T1's object)    │   │
+                   ││                       ││    ├──────────────────┤   │
+                   │└───────────────────────┼┼───→│ String "Hello"   │   │
+                   │                        ││    │ (T2's object)    │◄──┘
+                   └────────────────────────┼┘    └──────────────────┘
+                                            │             ↑
+                                            └─────────────┘
+                          Both threads reference same demo object in heap
+```
+
+### Interview Q&A
+
+**Q1: Does each thread have its own stack?**  
+**A:** YES! Each thread has its own private runtime stack that stores local variables, method parameters, and return addresses.
+
+**Q2: What happens if thread stack becomes full?**  
+**A:** `StackOverflowError` is thrown. This typically happens with deep/infinite recursion.
+
+**Q3: Can threads access each other's stacks?**  
+**A:** NO! Thread stacks are private and isolated. Threads can only share heap memory.
+
+**Q4: Where are local variables stored?**  
+**A:** Local primitive variables and object references are stored in the thread's stack. The actual objects are in the heap.
+
+**Q5: Why are local variables thread-safe by default?**  
+**A:** Because each thread has its own stack, so local variables are automatically isolated and thread-safe (unless references point to shared heap objects).
+
+---
+
+**🎯 Key Takeaway:** Each thread has its own **STACK** (for local variables, method calls) but shares the **HEAP** (for objects) with other threads. This is why local variables are thread-safe, but instance/static variables need synchronization!
+
+---
+
+## 8. Thread Behavior is Unpredictable
+
+### Why Thread Behavior is Unpredictable?
+
+Thread execution order and timing are **non-deterministic** in Java. This is a crucial concept for understanding multithreading challenges.
+
+### Visual Demonstration
+
+```
+Expected Output:          Actual Output (Run 1):    Actual Output (Run 2):
+Thread-1: 1               Thread-2: 1               Thread-1: 1
+Thread-1: 2               Thread-1: 1               Thread-1: 2
+Thread-1: 3               Thread-2: 2               Thread-2: 1
+Thread-2: 1               Thread-1: 2               Thread-1: 3
+Thread-2: 2               Thread-2: 3               Thread-2: 2
+Thread-2: 3               Thread-1: 3               Thread-2: 3
+
+❌ You cannot predict the exact order!
+```
+
+### Code Example: Unpredictable Thread Execution
+
+```java
+public class UnpredictableThreadDemo {
+    public static void main(String[] args) {
+        System.out.println("Run this program multiple times - output will vary!\n");
+        
+        Thread t1 = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Thread-1: " + i);
+            }
+        }, "Thread-1");
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Thread-2: " + i);
+            }
+        }, "Thread-2");
+        
+        Thread t3 = new Thread(() -> {
+            for (int i = 1; i <= 5; i++) {
+                System.out.println("Thread-3: " + i);
+            }
+        }, "Thread-3");
+        
+        // Starting threads - but execution order is UNPREDICTABLE
+        t1.start();
+        t2.start();
+        t3.start();
+        
+        System.out.println("Main thread finished starting all threads");
+        // Even this main thread message can appear anywhere in output!
+    }
+}
+```
+
+**Output (Run 1):**
+```
+Thread-1: 1
+Thread-1: 2
+Main thread finished starting all threads
+Thread-2: 1
+Thread-3: 1
+Thread-1: 3
+Thread-2: 2
+Thread-3: 2
+Thread-1: 4
+Thread-2: 3
+...
+```
+
+**Output (Run 2):**
+```
+Main thread finished starting all threads
+Thread-3: 1
+Thread-2: 1
+Thread-3: 2
+Thread-1: 1
+Thread-3: 3
+Thread-2: 2
+Thread-1: 2
+...
+```
+
+### Reasons for Unpredictable Behavior
+
+#### 1. **Thread Scheduler Dependency**
+
+```
+┌────────────────────────────────────────────────────────┐
+│              JVM THREAD SCHEDULER                      │
+│  (Non-deterministic - OS and JVM implementation)       │
+└────────────────────────────────────────────────────────┘
+         │          │           │
+         ▼          ▼           ▼
+    Thread-1    Thread-2    Thread-3
+    
+The scheduler decides:
+- Which thread gets CPU time
+- When to switch between threads
+- How long each thread runs
+- Order of execution
+
+✗ YOU CANNOT CONTROL THIS!
+```
+
+**Factors affecting scheduler:**
+- OS scheduling algorithm (Round-robin, Priority-based, etc.)
+- CPU core availability
+- Thread priority (but not guaranteed)
+- System load
+- JVM implementation
+
+#### 2. **CPU Core Assignment**
+
+```java
+public class CPUCoreDemo {
+    public static void main(String[] args) {
+        int cores = Runtime.getRuntime().availableProcessors();
+        System.out.println("Available CPU cores: " + cores);
+        
+        // With multiple cores, threads can run in TRUE PARALLEL
+        // Making execution order even more unpredictable
+        
+        for (int i = 0; i < 10; i++) {
+            final int threadNum = i;
+            new Thread(() -> {
+                System.out.println("Thread-" + threadNum + 
+                                  " running on core (unpredictable)");
+            }).start();
+        }
+    }
+}
+```
+
+**On 8-core CPU:**
+```
+Available CPU cores: 8
+Thread-0 running on core (unpredictable)
+Thread-3 running on core (unpredictable)
+Thread-1 running on core (unpredictable)
+Thread-5 running on core (unpredictable)
+Thread-2 running on core (unpredictable)
+Thread-7 running on core (unpredictable)
+Thread-4 running on core (unpredictable)
+Thread-6 running on core (unpredictable)
+Thread-8 running on core (unpredictable)
+Thread-9 running on core (unpredictable)
+
+Order changes every time!
+```
+
+#### 3. **Context Switching**
+
+```
+Time  →
+CPU   : [T1][T2][T1][T3][T2][T1][T3][T2]...
+         │   │   │   │   │   │   │   │
+Context  ↓   ↓   ↓   ↓   ↓   ↓   ↓   ↓
+Switch  Save Load Save Load (Unpredictable timing)
+
+Thread-1 runs → switched out → runs again → switched out
+Thread-2 waits → runs → switched out → runs again
+Thread-3 waits → waits → runs → switched out
+
+YOU CANNOT PREDICT:
+❌ When context switch happens
+❌ Which thread runs next
+❌ How long a thread runs
+```
+
+#### 4. **Race Conditions**
+
+```java
+public class RaceConditionDemo {
+    static int counter = 0; // Shared variable
+    
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                counter++; // Read-Modify-Write (not atomic)
+            }
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                counter++; // Read-Modify-Write (not atomic)
+            }
+        });
+        
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        
+        System.out.println("Counter (expected 2000): " + counter);
+        // Output is UNPREDICTABLE and usually less than 2000!
+    }
+}
+```
+
+**Output (varies each run):**
+```
+Run 1: Counter (expected 2000): 1847
+Run 2: Counter (expected 2000): 1923
+Run 3: Counter (expected 2000): 1756
+Run 4: Counter (expected 2000): 2000  ← Sometimes!
+Run 5: Counter (expected 2000): 1889
+```
+
+**Why unpredictable counter?**
+
+```
+Thread-1 reads counter=100    │  Thread-2 reads counter=100
+Thread-1 increments to 101    │  Thread-2 increments to 101
+Thread-1 writes 101           │  Thread-2 writes 101
+                              ↓
+Result: counter=101 (should be 102!)
+LOST UPDATE due to unpredictable thread interleaving!
+```
+
+#### 5. **Memory Visibility Issues**
+
+```java
+public class MemoryVisibilityDemo {
+    static boolean flag = false; // Not volatile!
+    static int value = 0;
+    
+    public static void main(String[] args) throws InterruptedException {
+        Thread writer = new Thread(() -> {
+            System.out.println("Writer: Setting value and flag");
+            value = 42;
+            flag = true; // May not be visible to reader immediately!
+        });
+        
+        Thread reader = new Thread(() -> {
+            while (!flag) {
+                // Waiting for flag - might wait forever!
+                // Due to CPU cache, may not see updated flag
+            }
+            System.out.println("Reader: Value is " + value);
+            // Value might still be 0 due to memory visibility!
+        });
+        
+        reader.start();
+        Thread.sleep(100);
+        writer.start();
+        
+        // Behavior is UNPREDICTABLE:
+        // - Reader might see updated flag immediately
+        // - Reader might never see updated flag (infinite loop)
+        // - Reader might see flag but not updated value
+    }
+}
+```
+
+### Proving Unpredictability
+
+```java
+public class ProveUnpredictability {
+    public static void main(String[] args) {
+        System.out.println("Running the same program 5 times:\n");
+        
+        for (int run = 1; run <= 5; run++) {
+            System.out.println("=== RUN " + run + " ===");
+            runThreads();
+            System.out.println();
+            
+            try {
+                Thread.sleep(1000); // Wait between runs
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    static void runThreads() {
+        Thread t1 = new Thread(() -> System.out.print("A"));
+        Thread t2 = new Thread(() -> System.out.print("B"));
+        Thread t3 = new Thread(() -> System.out.print("C"));
+        
+        t1.start();
+        t2.start();
+        t3.start();
+        
+        try {
+            t1.join();
+            t2.join();
+            t3.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**Output:**
+```
+Running the same program 5 times:
+
+=== RUN 1 ===
+ABC
+
+=== RUN 2 ===
+BAC
+
+=== RUN 3 ===
+CBA
+
+=== RUN 4 ===
+ACB
+
+=== RUN 5 ===
+BCA
+
+✗ Different output each time - UNPREDICTABLE!
+```
+
+### How to Control Unpredictability?
+
+While you cannot make threads fully predictable, you can control synchronization:
+
+#### 1. **Using join()**
+```java
+Thread t1 = new Thread(() -> System.out.println("Task 1"));
+Thread t2 = new Thread(() -> System.out.println("Task 2"));
+
+t1.start();
+t1.join(); // Wait for t1 to complete
+t2.start();
+t2.join(); // Wait for t2 to complete
+
+// Now execution order is controlled: t1 always before t2
+```
+
+#### 2. **Using Synchronization**
+```java
+synchronized static void printMessage(String msg) {
+    System.out.println(msg);
+    // Only one thread can execute at a time
+}
+```
+
+#### 3. **Using Locks**
+```java
+Lock lock = new ReentrantLock();
+lock.lock();
+try {
+    // Critical section - only one thread at a time
+} finally {
+    lock.unlock();
+}
+```
+
+#### 4. **Using CountDownLatch**
+```java
+CountDownLatch latch = new CountDownLatch(1);
+
+Thread t1 = new Thread(() -> {
+    latch.await(); // Wait for signal
+    System.out.println("T1 after T2");
+});
+
+Thread t2 = new Thread(() -> {
+    System.out.println("T2 first");
+    latch.countDown(); // Signal T1
+});
+```
+
+### Interview Q&A
+
+**Q1: Why is thread behavior unpredictable?**  
+**A:** Due to non-deterministic thread scheduling by JVM/OS, context switching, CPU core assignment, and race conditions. The exact execution order cannot be guaranteed.
+
+**Q2: Can we make threads execute in specific order?**  
+**A:** Yes, using synchronization mechanisms like `join()`, `wait()`/`notify()`, locks, or `CountDownLatch` - but this reduces parallelism benefits.
+
+**Q3: Does thread priority guarantee execution order?**  
+**A:** NO! Priority is just a hint to the scheduler. It doesn't guarantee order or execution time.
+
+**Q4: Is unpredictability a bug?**  
+**A:** No, it's a fundamental characteristic of concurrent programming. We must write thread-safe code that works regardless of execution order.
+
+**Q5: How to test multithreaded code if it's unpredictable?**  
+**A:** Use stress testing, run tests multiple times, use tools like Java Concurrency Stress Tests (jcstress), and ensure thread safety through proper synchronization.
+
+---
+
+**🎯 Key Takeaway:** Thread execution order is **UNPREDICTABLE** and **NON-DETERMINISTIC**. You cannot rely on any specific order unless you explicitly coordinate using synchronization mechanisms. Always write thread-safe code!
+
+---
+
+## 9. When Threads Are Not Lightweight Process
+
+### Answer: Threads Can Become Heavyweight!
+
+While threads are generally considered "lightweight" compared to processes, there are scenarios where threads lose their lightweight advantage and become **heavyweight**.
+
+### When Threads Become Heavyweight?
+
+#### 1. **Excessive Thread Creation**
+
+```java
+// ❌ BAD: Creating too many threads
+public class TooManyThreadsDemo {
+    public static void main(String[] args) {
+        System.out.println("Creating 10,000 threads...");
+        
+        long startTime = System.currentTimeMillis();
+        Thread[] threads = new Thread[10000];
+        
+        for (int i = 0; i < 10000; i++) {
+            threads[i] = new Thread(() -> {
+                try {
+                    Thread.sleep(10000); // Keep thread alive
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+            threads[i].start();
+        }
+        
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time taken: " + (endTime - startTime) + "ms");
+        System.out.println("Memory consumed: " + 
+            (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024 + " MB");
+        
+        // Result: HEAVYWEIGHT!
+        // - High memory consumption (~10GB with 1MB stack per thread)
+        // - High creation time
+        // - Excessive context switching
+        // - May cause OutOfMemoryError
+    }
+}
+```
+
+**Problems with too many threads:**
+```
+10,000 threads × 1 MB stack size = ~10 GB memory!
+Context switching overhead increases exponentially
+CPU spends more time switching than doing actual work
+```
+
+**✅ BETTER: Use Thread Pool**
+```java
+// ✅ GOOD: Using Thread Pool
+import java.util.concurrent.*;
+
+public class ThreadPoolDemo {
+    public static void main(String[] args) {
+        // Create pool with optimal size
+        int cores = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(cores * 2);
+        
+        // Submit 10,000 tasks - reuses limited threads
+        for (int i = 0; i < 10000; i++) {
+            executor.submit(() -> {
+                // Task execution
+            });
+        }
+        
+        executor.shutdown();
+        
+        // Result: LIGHTWEIGHT!
+        // - Limited number of threads (e.g., 16 threads)
+        // - Thread reuse
+        // - Lower memory footprint
+        // - Better performance
+    }
+}
+```
+
+#### 2. **Large Stack Size Configuration**
+
+```java
+// Default stack size: ~1 MB per thread
+// Custom stack size can make threads heavyweight!
+
+// ❌ Running with large stack: java -Xss10m MyProgram
+// Each thread now uses 10 MB instead of 1 MB!
+
+public class LargeStackDemo {
+    public static void main(String[] args) {
+        System.out.println("Creating 1000 threads with 10MB stack each");
+        
+        // 1000 threads × 10 MB = 10 GB memory!
+        for (int i = 0; i < 1000; i++) {
+            new Thread(() -> {
+                deepRecursion(0);
+            }).start();
+        }
+        
+        // Threads are now HEAVYWEIGHT due to large stack!
+    }
+    
+    static void deepRecursion(int depth) {
+        if (depth < 100000) {
+            deepRecursion(depth + 1);
+        }
+    }
+}
+```
+
+**Memory Impact:**
+```
+Default:  1000 threads × 1 MB  = 1 GB
+-Xss10m:  1000 threads × 10 MB = 10 GB  ← HEAVYWEIGHT!
+```
+
+#### 3. **Long-Running Threads**
+
+```java
+public class LongRunningThreadsDemo {
+    public static void main(String[] args) {
+        // ❌ BAD: Long-running threads that just wait
+        for (int i = 0; i < 1000; i++) {
+            new Thread(() -> {
+                try {
+                    // Thread sits idle for hours - waste of resources!
+                    Thread.sleep(3600000); // 1 hour
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+        
+        // Problems:
+        // - 1000 threads consuming memory but doing nothing
+        // - Resources locked unnecessarily
+        // - Threads become HEAVYWEIGHT overhead
+    }
+}
+```
+
+**✅ BETTER:**
+```java
+// ✅ GOOD: Use scheduled executor for delayed tasks
+ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
+
+for (int i = 0; i < 1000; i++) {
+    scheduler.schedule(() -> {
+        // Task runs after delay
+    }, 1, TimeUnit.HOURS);
+}
+
+// Only 10 threads handle 1000 delayed tasks - LIGHTWEIGHT!
+```
+
+#### 4. **Threads with Heavy Native Operations**
+
+```java
+public class NativeOperationsDemo {
+    public static void main(String[] args) {
+        Thread t = new Thread(() -> {
+            // Native operations may not be lightweight
+            
+            // File I/O - may block thread
+            try (BufferedReader reader = new BufferedReader(
+                    new FileReader("large-file.txt"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    // Thread blocked on I/O - HEAVYWEIGHT!
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            // Network I/O - may block thread
+            try (Socket socket = new Socket("example.com", 80)) {
+                // Thread blocked on network - HEAVYWEIGHT!
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        
+        t.start();
+        
+        // Solution: Use NIO or asynchronous I/O
+    }
+}
+```
+
+#### 5. **Threads Holding Multiple Locks**
+
+```java
+public class MultipleLockDemo {
+    private final Object lock1 = new Object();
+    private final Object lock2 = new Object();
+    private final Object lock3 = new Object();
+    
+    public void heavyweightMethod() {
+        // Thread holds multiple locks - becomes HEAVYWEIGHT
+        synchronized (lock1) {
+            synchronized (lock2) {
+                synchronized (lock3) {
+                    // Thread holds 3 locks!
+                    // - Blocks other threads
+                    // - Increases contention
+                    // - Reduces concurrency
+                    // - Makes thread HEAVYWEIGHT
+                    
+                    try {
+                        Thread.sleep(5000); // Holding locks for 5 seconds!
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+#### 6. **Deep Call Stack**
+
+```java
+public class DeepCallStackDemo {
+    public static void main(String[] args) {
+        new Thread(() -> {
+            // Deep recursion or nested calls
+            deepMethod(0);
+        }).start();
+    }
+    
+    static void deepMethod(int depth) {
+        byte[] largeLocalArray = new byte[10000]; // 10KB per frame
+        
+        if (depth < 1000) {
+            deepMethod(depth + 1);
+        }
+        
+        // 1000 stack frames × 10KB = 10 MB stack usage
+        // Thread becomes HEAVYWEIGHT!
+    }
+}
+```
+
+### Comparison: Lightweight vs Heavyweight Threads
+
+| Scenario | Lightweight | Heavyweight |
+|----------|-------------|-------------|
+| **Thread Count** | Few threads (10-100) | Thousands of threads |
+| **Stack Size** | Default (~1 MB) | Custom large stack (>5 MB) |
+| **Lifecycle** | Short-lived, task-based | Long-running, idle |
+| **Resource Usage** | Minimal, shared resources | High memory, many locks |
+| **Creation Method** | Thread pool, executors | Direct thread creation |
+| **I/O Operations** | Non-blocking (NIO) | Blocking I/O |
+| **Lock Holding** | Brief, single lock | Multiple locks, long duration |
+| **Context Switch** | Infrequent | Frequent |
+
+### Memory Calculation Example
+
+```java
+public class ThreadMemoryCalculation {
+    public static void main(String[] args) {
+        int threadCount = 1000;
+        int stackSizeMB = 1; // Default
+        
+        // Lightweight calculation:
+        long lightweightMemory = threadCount * stackSizeMB;
+        System.out.println("Lightweight (1000 threads × 1MB): " + 
+                          lightweightMemory + " MB");
+        
+        // Heavyweight calculation:
+        stackSizeMB = 10; // Large stack
+        long heavyweightMemory = threadCount * stackSizeMB;
+        System.out.println("Heavyweight (1000 threads × 10MB): " + 
+                          heavyweightMemory + " MB");
+        
+        // Difference:
+        System.out.println("Difference: " + 
+                          (heavyweightMemory - lightweightMemory) + " MB overhead!");
+    }
+}
+```
+
+**Output:**
+```
+Lightweight (1000 threads × 1MB): 1000 MB
+Heavyweight (1000 threads × 10MB): 10000 MB
+Difference: 9000 MB overhead!
+```
+
+### Best Practices to Keep Threads Lightweight
+
+✅ **DO:**
+1. Use thread pools instead of creating threads directly
+2. Keep default stack size unless necessary
+3. Make threads short-lived and task-based
+4. Use non-blocking I/O (NIO) for I/O operations
+5. Release locks quickly
+6. Limit the number of threads to CPU cores × 2
+
+❌ **DON'T:**
+1. Create thousands of threads
+2. Use excessively large stack sizes
+3. Keep threads idle for long periods
+4. Hold multiple locks simultaneously for long
+5. Use blocking I/O in many threads
+6. Use deep recursion in multithreaded code
+
+### Code Example: Lightweight Best Practice
+
+```java
+import java.util.concurrent.*;
+
+public class LightweightBestPractice {
+    public static void main(String[] args) {
+        // ✅ Calculate optimal pool size
+        int cores = Runtime.getRuntime().availableProcessors();
+        int poolSize = cores * 2; // Optimal for CPU-bound tasks
+        
+        System.out.println("CPU Cores: " + cores);
+        System.out.println("Thread Pool Size: " + poolSize);
+        
+        // ✅ Create thread pool
+        ExecutorService executor = Executors.newFixedThreadPool(poolSize);
+        
+        // ✅ Submit many tasks - threads are reused
+        for (int i = 0; i < 10000; i++) {
+            final int taskId = i;
+            executor.submit(() -> {
+                // Short-lived task
+                processTask(taskId);
+            });
+        }
+        
+        executor.shutdown();
+        System.out.println("10,000 tasks submitted to " + poolSize + " threads!");
+        System.out.println("Threads remain LIGHTWEIGHT!");
+    }
+    
+    static void processTask(int id) {
+        // Quick task execution
+        int result = id * 2;
+    }
+}
+```
+
+**Output:**
+```
+CPU Cores: 8
+Thread Pool Size: 16
+10,000 tasks submitted to 16 threads!
+Threads remain LIGHTWEIGHT!
+```
+
+---
+
+**🎯 Key Takeaway:** Threads are lightweight **ONLY** when used correctly. They become heavyweight when you create too many, use large stacks, keep them idle, or hold resources for too long. Use **thread pools** and follow best practices to maintain lightweight threads!
+
+---
+
+## 10. Ensuring Threads End in Order
+
+### Problem Statement
+
+How can you ensure all threads that started from main must end in the **order** in which they started, and main should end **last**?
+
+### Solution: Using join() Method
+
+The `join()` method allows one thread to wait for another thread to complete before continuing execution.
+
+### Visual Representation
+
+```
+WITHOUT join():                    WITH join():
+═══════════════                   ═══════════════
+
+Main    ━━━━━━━━━┓                Main    ━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                 ┃                                                  ┃
+Thread-1 ━━━━┓  ┃                Thread-1 ━━━━━┓                  ┃
+             ┃  ┃                              ┃ (main waits)     ┃
+Thread-2  ━━━┓┃ ┃                Thread-2  ━━━━━━━┓              ┃
+             ┃┃ ┃                                  ┃ (main waits) ┃
+Thread-3 ━━━━┓┃┃┃                Thread-3  ━━━━━━━━━━┓          ┃
+             ┃┃┃┃                                      ┃          ┃
+Time    ─────┸┸┸┸                Time    ─────────────┸──────────┸
+
+❌ Unpredictable end order       ✅ Controlled end order
+Main may finish first            T1 → T2 → T3 → Main (guaranteed)
+```
+
+### Complete Solution
+
+```java
+public class ThreadOrderDemo {
+    public static void main(String[] args) {
+        System.out.println("Main thread started");
+        
+        // Create threads
+        Thread thread1 = new Thread(() -> {
+            System.out.println("Thread-1 started");
+            try {
+                Thread.sleep(2000); // Simulate work
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-1 finished");
+        }, "Thread-1");
+        
+        Thread thread2 = new Thread(() -> {
+            System.out.println("Thread-2 started");
+            try {
+                Thread.sleep(1500); // Simulate work
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-2 finished");
+        }, "Thread-2");
+        
+        Thread thread3 = new Thread(() -> {
+            System.out.println("Thread-3 started");
+            try {
+                Thread.sleep(1000); // Simulate work
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-3 finished");
+        }, "Thread-3");
+        
+        // Start threads in order
+        thread1.start();
+        thread2.start();
+        thread3.start();
+        
+        // Wait for threads to finish IN ORDER using join()
+        try {
+            thread1.join(); // Main waits for thread1 to complete
+            System.out.println("Main: Thread-1 has finished");
+            
+            thread2.join(); // Main waits for thread2 to complete
+            System.out.println("Main: Thread-2 has finished");
+            
+            thread3.join(); // Main waits for thread3 to complete
+            System.out.println("Main: Thread-3 has finished");
+            
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        System.out.println("Main thread finished (last)");
+    }
+}
+```
+
+**Output:**
+```
+Main thread started
+Thread-1 started
+Thread-2 started
+Thread-3 started
+Thread-3 finished      ← T3 finishes first (1 second)
+Thread-2 finished      ← T2 finishes second (1.5 seconds)
+Thread-1 finished      ← T1 finishes last (2 seconds)
+Main: Thread-1 has finished  ← Main acknowledges T1 completion
+Main: Thread-2 has finished  ← Main acknowledges T2 completion
+Main: Thread-3 has finished  ← Main acknowledges T3 completion
+Main thread finished (last)  ← Main finishes LAST (guaranteed)
+```
+
+### Explanation of join()
+
+```java
+thread1.join(); // Current thread (main) waits until thread1 completes
+```
+
+**What happens:**
+```
+1. Main thread reaches thread1.join()
+2. Main thread BLOCKS (waits)
+3. Thread-1 continues execution
+4. Thread-1 completes
+5. Main thread UNBLOCKS (resumes)
+6. Main thread continues to next line
+```
+
+### Advanced Example: Ensuring Sequential Completion Acknowledgment
+
+```java
+public class SequentialThreadCompletion {
+    public static void main(String[] args) throws InterruptedException {
+        System.out.println("Starting threads in order: T1, T2, T3\n");
+        
+        Thread t1 = new Thread(new Task("Task-1", 3000), "Thread-1");
+        Thread t2 = new Thread(new Task("Task-2", 2000), "Thread-2");
+        Thread t3 = new Thread(new Task("Task-3", 1000), "Thread-3");
+        
+        // Start all threads (they may finish in any order based on execution time)
+        t1.start();
+        t2.start();
+        t3.start();
+        
+        System.out.println("All threads started\n");
+        
+        // Ensure threads complete acknowledgment in ORDER: T1 → T2 → T3
+        System.out.println("Waiting for Thread-1 to complete...");
+        t1.join(); // Main waits for T1
+        System.out.println("✓ Thread-1 completed and acknowledged\n");
+        
+        System.out.println("Waiting for Thread-2 to complete...");
+        t2.join(); // Main waits for T2
+        System.out.println("✓ Thread-2 completed and acknowledged\n");
+        
+        System.out.println("Waiting for Thread-3 to complete...");
+        t3.join(); // Main waits for T3
+        System.out.println("✓ Thread-3 completed and acknowledged\n");
+        
+        System.out.println("All threads completed in order!");
+        System.out.println("Main thread finishing last ✓");
+    }
+    
+    static class Task implements Runnable {
+        private String name;
+        private long duration;
+        
+        public Task(String name, long duration) {
+            this.name = name;
+            this.duration = duration;
+        }
+        
+        @Override
+        public void run() {
+            System.out.println("  [" + Thread.currentThread().getName() + 
+                             "] " + name + " started");
+            try {
+                Thread.sleep(duration);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("  [" + Thread.currentThread().getName() + 
+                             "] " + name + " finished (" + duration + "ms)");
+        }
+    }
+}
+```
+
+**Output:**
+```
+Starting threads in order: T1, T2, T3
+
+All threads started
+
+Waiting for Thread-1 to complete...
+  [Thread-1] Task-1 started
+  [Thread-2] Task-2 started
+  [Thread-3] Task-3 started
+  [Thread-3] Task-3 finished (1000ms)
+  [Thread-2] Task-2 finished (2000ms)
+  [Thread-1] Task-1 finished (3000ms)
+✓ Thread-1 completed and acknowledged
+
+Waiting for Thread-2 to complete...
+✓ Thread-2 completed and acknowledged
+
+Waiting for Thread-3 to complete...
+✓ Thread-3 completed and acknowledged
+
+All threads completed in order!
+Main thread finishing last ✓
+```
+
+### Alternative: Using CountDownLatch
+
+```java
+import java.util.concurrent.CountDownLatch;
+
+public class CountDownLatchOrderDemo {
+    public static void main(String[] args) throws InterruptedException {
+        CountDownLatch latch1 = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        CountDownLatch latch3 = new CountDownLatch(1);
+        
+        Thread t1 = new Thread(() -> {
+            System.out.println("Thread-1 executing");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-1 done");
+            latch1.countDown(); // Signal completion
+        });
+        
+        Thread t2 = new Thread(() -> {
+            System.out.println("Thread-2 executing");
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-2 done");
+            latch2.countDown(); // Signal completion
+        });
+        
+        Thread t3 = new Thread(() -> {
+            System.out.println("Thread-3 executing");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread-3 done");
+            latch3.countDown(); // Signal completion
+        });
+        
+        // Start threads
+        t1.start();
+        t2.start();
+        t3.start();
+        
+        // Wait for completion in order
+        latch1.await(); // Wait for T1
+        System.out.println("Main acknowledged: Thread-1 completed");
+        
+        latch2.await(); // Wait for T2
+        System.out.println("Main acknowledged: Thread-2 completed");
+        
+        latch3.await(); // Wait for T3
+        System.out.println("Main acknowledged: Thread-3 completed");
+        
+        System.out.println("Main finishing last!");
+    }
+}
+```
+
+### Comparison: Different Approaches
+
+| Approach | Pros | Cons | Use Case |
+|----------|------|------|----------|
+| **join()** | Simple, built-in | Blocks calling thread | Sequential thread completion |
+| **CountDownLatch** | Flexible, reusable | More complex | Coordinating multiple threads |
+| **Phaser** | Dynamic thread registration | Complex API | Multi-phase coordination |
+| **CompletableFuture** | Functional, composable | Verbose | Async programming |
+
+### Practical Example: Sequential Data Processing
+
+```java
+import java.util.*;
+
+public class SequentialDataProcessing {
+    static List<String> results = Collections.synchronizedList(new ArrayList<>());
+    
+    public static void main(String[] args) throws InterruptedException {
+        Thread fetchThread = new Thread(() -> {
+            System.out.println("1. Fetching data...");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            results.add("Data fetched");
+            System.out.println("   ✓ Data fetched");
+        });
+        
+        Thread processThread = new Thread(() -> {
+            System.out.println("2. Processing data...");
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            results.add("Data processed");
+            System.out.println("   ✓ Data processed");
+        });
+        
+        Thread saveThread = new Thread(() -> {
+            System.out.println("3. Saving data...");
+            try {
+                Thread.sleep(800);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            results.add("Data saved");
+            System.out.println("   ✓ Data saved");
+        });
+        
+        // Start all threads
+        fetchThread.start();
+        processThread.start();
+        saveThread.start();
+        
+        // Ensure order: Fetch → Process → Save → Main
+        fetchThread.join();
+        System.out.println("Main: Fetch completed");
+        
+        processThread.join();
+        System.out.println("Main: Process completed");
+        
+        saveThread.join();
+        System.out.println("Main: Save completed");
+        
+        System.out.println("\nFinal Results: " + results);
+        System.out.println("Main thread finished last ✓");
+    }
+}
+```
+
+**Output:**
+```
+1. Fetching data...
+2. Processing data...
+3. Saving data...
+   ✓ Data fetched
+Main: Fetch completed
+   ✓ Data processed
+Main: Process completed
+   ✓ Data saved
+Main: Save completed
+
+Final Results: [Data fetched, Data processed, Data saved]
+Main thread finished last ✓
+```
+
+### Interview Q&A
+
+**Q1: How to ensure main thread finishes last?**  
+**A:** Use `join()` on all threads before main completes. Call `thread.join()` for each thread in the order you want to acknowledge their completion.
+
+**Q2: Does join() guarantee thread execution order?**  
+**A:** No! `join()` doesn't control execution order. Threads still run concurrently. `join()` only ensures the calling thread waits for the target thread to complete.
+
+**Q3: What if a thread takes too long?**  
+**A:** Use `join(timeout)` to wait for a maximum time:
+```java
+thread1.join(5000); // Wait max 5 seconds
+if (thread1.isAlive()) {
+    System.out.println("Thread-1 still running after timeout");
+}
+```
+
+**Q4: Can we use join() on the same thread multiple times?**  
+**A:** Yes, but after the first `join()` returns, subsequent calls return immediately since the thread is already dead.
+
+**Q5: What happens if we don't use join()?**  
+**A:** Main thread may finish before child threads, and the program may terminate before threads complete (if child threads are not daemon threads, JVM waits, but main thread's code finishes).
+
+---
+
+**🎯 Key Takeaway:** Use `thread.join()` to ensure main thread waits for all child threads to complete. Call `join()` on threads in the order you want to acknowledge their completion, ensuring main finishes **last**!
+
+---
+
 # Part 2: Thread Management
 
-## 6. Thread Priority
+## 11. Thread Priority
 
 ### Understanding Priority
 
@@ -1542,7 +3115,7 @@ Background: 100%
 
 ---
 
-## 7. Thread Sleep, Yield, and Join
+## 12. Thread Sleep, Yield, and Join
 
 ### 1. sleep() Method
 
@@ -2498,7 +4071,7 @@ All operations completed successfully!
 
 ---
 
-## 8. Daemon Threads
+## 13. Daemon Threads
 
 ### What is a Daemon Thread?
 
@@ -3003,7 +4576,7 @@ Application closing...
 
 ---
 
-## 9. Thread Naming
+## 14. Thread Naming
 
 ### Default Thread Names
 
@@ -3217,7 +4790,7 @@ class BestPracticeNaming {
 
 ---
 
-## 10. Thread Groups
+## 15. Thread Groups
 
 ### What is a Thread Group?
 
@@ -3955,7 +5528,7 @@ class ModernWay {
 
 # Part 3: Synchronization
 
-## 11. What is Synchronization?
+## 16. What is Synchronization?
 
 ### The Problem: Race Condition
 
@@ -4113,7 +5686,7 @@ Object Lock
 
 ---
 
-## 12. Synchronized Method
+## 17. Synchronized Method
 
 ### Syntax
 
@@ -4300,7 +5873,7 @@ Thread-2 in synchronized method
 
 ---
 
-## 13. Synchronized Block
+## 18. Synchronized Block
 
 ### Why Synchronized Block?
 
@@ -4487,7 +6060,7 @@ class PrintShopDemo {
 
 ---
 
-## 14. Static Synchronization
+## 19. Static Synchronization
 
 ### What is Static Synchronization?
 
@@ -4688,7 +6261,7 @@ class ConnectionPoolDemo {
 
 ---
 
-## 15. Deadlock
+## 20. Deadlock
 
 ### What is Deadlock?
 
@@ -4973,7 +6546,7 @@ class BankAccountDeadlock {
 
 ---
 
-## 22. Executor Framework
+## 27. Executor Framework
 
 ### What is Executor Framework?
 
@@ -6045,7 +7618,7 @@ int poolSize = Runtime.getRuntime().availableProcessors() * (1 + waitTime/comput
 
 ---
 
-## 26. BlockingQueue
+## 31. BlockingQueue
 
 ### What is BlockingQueue?
 
@@ -6157,7 +7730,7 @@ Produced: Item-4
 
 ---
 
-## 27. ArrayBlockingQueue vs LinkedBlockingQueue
+## 32. ArrayBlockingQueue vs LinkedBlockingQueue
 
 ### ArrayBlockingQueue
 
@@ -6357,7 +7930,7 @@ Demo completed!
 
 ---
 
-## 28. PriorityBlockingQueue
+## 33. PriorityBlockingQueue
 
 ### What is PriorityBlockingQueue?
 
@@ -6470,7 +8043,7 @@ All tasks processed!
 
 ---
 
-## 29. DelayQueue
+## 34. DelayQueue
 
 ### What is DelayQueue?
 
@@ -6563,7 +8136,7 @@ All tasks completed!
 
 ---
 
-## 30. SynchronousQueue
+## 35. SynchronousQueue
 
 ### What is SynchronousQueue?
 
@@ -6658,7 +8231,7 @@ Queue size: 0
 
 ---
 
-## 31. Exchanger
+## 38. Exchanger
 
 ### What is Exchanger?
 
@@ -6754,7 +8327,7 @@ Exchange completed!
 
 ---
 
-## 32. Busy Spinning (Spin-Wait)
+## 39. Busy Spinning (Spin-Wait)
 
 ### What is Busy Spinning?
 
@@ -6913,7 +8486,7 @@ Consumer: Received: Optimized message!
 
 ---
 
-## 33. join() vs wait() - The Differences
+## 40. join() vs wait() - The Differences
 
 ### Key Differences
 
