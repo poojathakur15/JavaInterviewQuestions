@@ -5005,6 +5005,642 @@ map.computeIfAbsent("key", k -> new ArrayList<>()).add(1);
 
 ---
 
+### ⚠️ The equals() and hashCode() Contract - CRITICAL for HashMap
+
+> **💡 Interview Alert:** This is one of the most frequently asked HashMap questions!
+
+When using **custom objects as HashMap keys**, you **MUST** properly override both `equals()` and `hashCode()` methods. Failure to do so will cause HashMap to malfunction.
+
+---
+
+#### 📋 The Contract Rules (You MUST Follow These!)
+
+```
+The equals() and hashCode() Contract:
+
+1. ✅ If two objects are equal according to equals() method,
+   then they MUST have the same hashCode()
+   
+2. ✅ If two objects have the same hashCode(),
+   they MAY or MAY NOT be equal (collisions are allowed)
+   
+3. ✅ If you override equals(), you MUST override hashCode()
+   
+4. ✅ If you override hashCode(), you SHOULD override equals()
+
+5. ✅ hashCode() must return the same value for the same object
+   during the same execution (consistency)
+   
+6. ✅ equals() must be reflexive, symmetric, transitive, and consistent
+```
+
+**Visual Representation:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              equals() and hashCode() Relationship            │
+└─────────────────────────────────────────────────────────────┘
+
+Case 1: Both objects equal
+  obj1.equals(obj2) = true
+         ↓
+  obj1.hashCode() == obj2.hashCode()  ✅ MUST be true
+  
+
+Case 2: Different hashCodes
+  obj1.hashCode() != obj2.hashCode()
+         ↓
+  obj1.equals(obj2) = false  ✅ MUST be false
+  
+
+Case 3: Same hashCode (collision)
+  obj1.hashCode() == obj2.hashCode()
+         ↓
+  obj1.equals(obj2) = ???  ⚠️ Could be true OR false
+                              (This is why equals() check is needed!)
+```
+
+---
+
+#### 🚫 What Happens When You Violate the Contract?
+
+**Example 1: Override equals() but NOT hashCode() - BROKEN!**
+
+```java
+class Person {
+    String name;
+    int age;
+    
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+    
+    // ✅ Overridden equals()
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Person person = (Person) o;
+        return age == person.age && Objects.equals(name, person.name);
+    }
+    
+    // ❌ NOT overridden hashCode() - Uses Object's default implementation!
+    // This violates the contract!
+}
+
+// Test the broken implementation
+HashMap<Person, String> map = new HashMap<>();
+
+Person p1 = new Person("Alice", 30);
+Person p2 = new Person("Alice", 30);
+
+System.out.println("p1.equals(p2): " + p1.equals(p2));  // true ✅
+System.out.println("p1.hashCode(): " + p1.hashCode());  // e.g., 12345
+System.out.println("p2.hashCode(): " + p2.hashCode());  // e.g., 67890
+
+// Different hashCodes even though objects are equal! 💥
+
+map.put(p1, "Person 1");
+System.out.println("Get with p1: " + map.get(p1));  // "Person 1" ✅ Works
+System.out.println("Get with p2: " + map.get(p2));  // null ❌ FAILS!
+
+// Why? p1 and p2 go to DIFFERENT buckets due to different hashCodes!
+```
+
+**Output:**
+```
+p1.equals(p2): true
+p1.hashCode(): 366712642
+p2.hashCode(): 1829164700
+Get with p1: Person 1
+Get with p2: null    ← WRONG! Should return "Person 1"
+```
+
+**Why This Breaks:**
+
+```
+HashMap Internal:
+
+put(p1, "Person 1"):
+  Step 1: hash(p1) = 366712642
+  Step 2: index = 366712642 & 15 = 2
+  Step 3: Store in bucket 2
+  
+  Bucket 2: [p1="Person 1"]
+
+
+get(p2):
+  Step 1: hash(p2) = 1829164700  ← Different hash!
+  Step 2: index = 1829164700 & 15 = 12  ← Different bucket!
+  Step 3: Look in bucket 12
+  Step 4: Bucket 12 is empty
+  Step 5: Return null  ❌ Even though p1.equals(p2)!
+
+The equal objects are stored in DIFFERENT buckets!
+HashMap can't find the value because it's looking in the wrong place!
+```
+
+---
+
+**Example 2: Override hashCode() but NOT equals() - BROKEN!**
+
+```java
+class Employee {
+    String id;
+    String name;
+    
+    public Employee(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+    
+    // ❌ NOT overridden equals() - Uses Object's default (reference comparison)
+    
+    // ✅ Overridden hashCode()
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name);
+    }
+}
+
+// Test
+HashMap<Employee, Integer> salaryMap = new HashMap<>();
+
+Employee e1 = new Employee("E001", "John");
+Employee e2 = new Employee("E001", "John");
+
+System.out.println("e1.equals(e2): " + e1.equals(e2));    // false ❌ (reference comparison)
+System.out.println("e1.hashCode(): " + e1.hashCode());    // Same value
+System.out.println("e2.hashCode(): " + e2.hashCode());    // Same value
+
+salaryMap.put(e1, 50000);
+System.out.println("Get with e1: " + salaryMap.get(e1));  // 50000 ✅
+System.out.println("Get with e2: " + salaryMap.get(e2));  // null ❌ FAILS!
+
+// Why? Even though they have same hashCode (same bucket),
+// equals() returns false (different references)
+```
+
+**Output:**
+```
+e1.equals(e2): false
+e1.hashCode(): 2094548373
+e2.hashCode(): 2094548373
+Get with e1: 50000
+Get with e2: null    ← WRONG! Logically should return 50000
+```
+
+**Why This Breaks:**
+
+```
+HashMap Internal:
+
+put(e1, 50000):
+  Step 1: hash(e1) = 2094548373
+  Step 2: index = 2094548373 & 15 = 5
+  Step 3: Store in bucket 5
+  
+  Bucket 5: [e1=50000]
+
+
+get(e2):
+  Step 1: hash(e2) = 2094548373  ← Same hash!
+  Step 2: index = 2094548373 & 15 = 5  ← Same bucket! ✅
+  Step 3: Found bucket 5 with e1
+  Step 4: e1.equals(e2)?  ← Checking...
+  Step 5: false  ❌ (Object.equals() compares references)
+  Step 6: Continue searching (no more entries)
+  Step 7: Return null  ❌
+
+Both go to SAME bucket, but equals() fails!
+HashMap can't confirm they're the same key!
+```
+
+---
+
+#### ✅ Correct Implementation - Both equals() AND hashCode()
+
+```java
+import java.util.*;
+
+class Student {
+    private String id;
+    private String name;
+    private int age;
+    
+    public Student(String id, String name, int age) {
+        this.id = id;
+        this.name = name;
+        this.age = age;
+    }
+    
+    // ✅ MUST override equals()
+    @Override
+    public boolean equals(Object o) {
+        // 1. Check if same reference (optimization)
+        if (this == o) return true;
+        
+        // 2. Check if null or different class
+        if (o == null || getClass() != o.getClass()) return false;
+        
+        // 3. Cast and compare fields
+        Student student = (Student) o;
+        return age == student.age &&
+               Objects.equals(id, student.id) &&
+               Objects.equals(name, student.name);
+    }
+    
+    // ✅ MUST override hashCode()
+    @Override
+    public int hashCode() {
+        // Use Objects.hash() with same fields as equals()
+        return Objects.hash(id, name, age);
+    }
+    
+    @Override
+    public String toString() {
+        return "Student{id='" + id + "', name='" + name + "', age=" + age + "}";
+    }
+}
+
+// Test the correct implementation
+class StudentHashMapDemo {
+    public static void main(String[] args) {
+        HashMap<Student, String> gradeMap = new HashMap<>();
+        
+        Student s1 = new Student("S001", "Alice", 20);
+        Student s2 = new Student("S001", "Alice", 20);  // Logically same as s1
+        Student s3 = new Student("S002", "Bob", 22);
+        
+        System.out.println("s1.equals(s2): " + s1.equals(s2));        // true ✅
+        System.out.println("s1.hashCode(): " + s1.hashCode());        // Same
+        System.out.println("s2.hashCode(): " + s2.hashCode());        // Same
+        System.out.println("s1.hashCode() == s2.hashCode(): " + 
+                          (s1.hashCode() == s2.hashCode()));           // true ✅
+        
+        // Put using s1
+        gradeMap.put(s1, "A+");
+        gradeMap.put(s3, "B");
+        
+        System.out.println("\nHashMap contents: " + gradeMap);
+        
+        // Get using s2 (different object, but logically equal to s1)
+        System.out.println("Get with s1: " + gradeMap.get(s1));  // "A+" ✅
+        System.out.println("Get with s2: " + gradeMap.get(s2));  // "A+" ✅ Works!
+        
+        // Update using s2
+        gradeMap.put(s2, "A++");  // Updates existing entry (same key)
+        System.out.println("After update: " + gradeMap.get(s1));  // "A++" ✅
+        
+        System.out.println("Map size: " + gradeMap.size());  // 2 (not 3!)
+    }
+}
+```
+
+**Output:**
+```
+s1.equals(s2): true
+s1.hashCode(): 1508725019
+s2.hashCode(): 1508725019
+s1.hashCode() == s2.hashCode(): true
+
+HashMap contents: {Student{id='S002', name='Bob', age=22}=B, Student{id='S001', name='Alice', age=20}=A+}
+Get with s1: A+
+Get with s2: A+     ← Works correctly! ✅
+After update: A++
+Map size: 2
+```
+
+---
+
+#### 🎯 Best Practices for equals() and hashCode()
+
+**1. Use the Same Fields in Both Methods**
+
+```java
+// ✅ CORRECT
+class Product {
+    String id;
+    String name;
+    double price;
+    
+    @Override
+    public boolean equals(Object o) {
+        // Uses: id, name, price
+        Product p = (Product) o;
+        return Objects.equals(id, p.id) &&
+               Objects.equals(name, p.name) &&
+               price == p.price;
+    }
+    
+    @Override
+    public int hashCode() {
+        // Uses: id, name, price (SAME fields!)
+        return Objects.hash(id, name, price);
+    }
+}
+
+// ❌ WRONG - Different fields used
+class ProductBad {
+    String id;
+    String name;
+    double price;
+    
+    @Override
+    public boolean equals(Object o) {
+        // Uses: id, name
+        ProductBad p = (ProductBad) o;
+        return Objects.equals(id, p.id) &&
+               Objects.equals(name, p.name);
+    }
+    
+    @Override
+    public int hashCode() {
+        // Uses: id only (DIFFERENT fields!) ❌
+        return Objects.hash(id);
+    }
+}
+
+// Why is ProductBad broken?
+ProductBad p1 = new ProductBad("P001", "Laptop", 1000);
+ProductBad p2 = new ProductBad("P001", "Desktop", 1200);
+
+p1.hashCode() == p2.hashCode()  // true (same id)
+p1.equals(p2)                   // false (different name)
+// This violates: same hashCode but not equal
+// While allowed, it increases collisions unnecessarily
+```
+
+**2. Use Objects.hash() and Objects.equals() Utilities**
+
+```java
+// ✅ Modern Java way (Java 7+)
+@Override
+public int hashCode() {
+    return Objects.hash(field1, field2, field3);
+}
+
+@Override
+public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    MyClass that = (MyClass) o;
+    return Objects.equals(field1, that.field1) &&
+           Objects.equals(field2, that.field2) &&
+           Objects.equals(field3, that.field3);
+}
+
+// ❌ Old manual way (error-prone)
+@Override
+public int hashCode() {
+    int result = field1 != null ? field1.hashCode() : 0;
+    result = 31 * result + (field2 != null ? field2.hashCode() : 0);
+    result = 31 * result + (field3 != null ? field3.hashCode() : 0);
+    return result;
+}
+```
+
+**3. Include All "Significant" Fields**
+
+```java
+class Book {
+    String isbn;          // ← Unique identifier
+    String title;         // ← Significant
+    String author;        // ← Significant
+    int publicationYear;  // ← Significant
+    int pageCount;        // ← Not significant for equality
+    double price;         // ← Not significant (can change)
+    
+    // ✅ Use significant fields only
+    @Override
+    public boolean equals(Object o) {
+        Book book = (Book) o;
+        return Objects.equals(isbn, book.isbn) &&
+               Objects.equals(title, book.title) &&
+               Objects.equals(author, book.author) &&
+               publicationYear == book.publicationYear;
+        // Don't include pageCount or price
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(isbn, title, author, publicationYear);
+    }
+}
+```
+
+**4. Handle Null Fields Properly**
+
+```java
+class Address {
+    String street;
+    String city;
+    String zipCode;
+    String country;
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Address address = (Address) o;
+        
+        // ✅ Objects.equals() handles nulls automatically
+        return Objects.equals(street, address.street) &&
+               Objects.equals(city, address.city) &&
+               Objects.equals(zipCode, address.zipCode) &&
+               Objects.equals(country, address.country);
+        
+        // ❌ DON'T do this (will throw NullPointerException):
+        // return street.equals(address.street) && ...
+    }
+    
+    @Override
+    public int hashCode() {
+        // ✅ Objects.hash() handles nulls automatically
+        return Objects.hash(street, city, zipCode, country);
+    }
+}
+```
+
+**5. Consider Using IDE Auto-Generation or Lombok**
+
+```java
+// ✅ Option 1: IDE (IntelliJ IDEA / Eclipse)
+// Right-click → Generate → equals() and hashCode()
+
+// ✅ Option 2: Lombok annotation
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode
+class Customer {
+    private String customerId;
+    private String name;
+    private String email;
+    
+    // equals() and hashCode() auto-generated!
+}
+
+// ✅ Option 3: Java 14+ Records (auto includes equals/hashCode)
+record Point(int x, int y) { }
+// equals() and hashCode() automatically provided!
+```
+
+---
+
+#### 🧪 Testing equals() and hashCode()
+
+```java
+class HashMapContractTest {
+    public static void main(String[] args) {
+        System.out.println("Testing equals() and hashCode() contract\n");
+        
+        Student s1 = new Student("S001", "Alice", 20);
+        Student s2 = new Student("S001", "Alice", 20);  // Equal to s1
+        Student s3 = new Student("S002", "Bob", 22);    // Different
+        
+        // Test 1: Reflexive - x.equals(x) must be true
+        assert s1.equals(s1) : "Reflexive test failed!";
+        System.out.println("✅ Test 1 Passed: Reflexive");
+        
+        // Test 2: Symmetric - x.equals(y) == y.equals(x)
+        assert s1.equals(s2) == s2.equals(s1) : "Symmetric test failed!";
+        System.out.println("✅ Test 2 Passed: Symmetric");
+        
+        // Test 3: Transitive - if x.equals(y) and y.equals(z), then x.equals(z)
+        Student s2b = new Student("S001", "Alice", 20);
+        assert s1.equals(s2) && s2.equals(s2b) && s1.equals(s2b) : "Transitive test failed!";
+        System.out.println("✅ Test 3 Passed: Transitive");
+        
+        // Test 4: Consistent - multiple calls return same result
+        assert s1.equals(s2) == s1.equals(s2) : "Consistent test failed!";
+        System.out.println("✅ Test 4 Passed: Consistent");
+        
+        // Test 5: Null handling - x.equals(null) must be false
+        assert !s1.equals(null) : "Null test failed!";
+        System.out.println("✅ Test 5 Passed: Null handling");
+        
+        // Test 6: Contract - equal objects must have same hashCode
+        assert s1.equals(s2) && (s1.hashCode() == s2.hashCode()) : 
+               "Contract violated: equal objects have different hashCodes!";
+        System.out.println("✅ Test 6 Passed: equals() → same hashCode()");
+        
+        // Test 7: Not equal objects may have different hashCodes
+        assert !s1.equals(s3) : "s1 and s3 should not be equal";
+        System.out.println("✅ Test 7 Passed: Different objects");
+        
+        // Test 8: HashMap functionality
+        HashMap<Student, String> map = new HashMap<>();
+        map.put(s1, "Grade A");
+        assert map.get(s2).equals("Grade A") : "HashMap lookup with equal key failed!";
+        System.out.println("✅ Test 8 Passed: HashMap works with equal keys");
+        
+        System.out.println("\n🎉 All tests passed! Contract is correctly implemented.");
+    }
+}
+```
+
+---
+
+#### 📊 Common Interview Questions
+
+**Q1: Why must equal objects have the same hashCode?**
+
+**A:** Because HashMap uses hashCode to determine the bucket. If equal objects had different hashCodes, they'd be stored in different buckets, and HashMap couldn't find them when looking up with an equal key.
+
+```java
+// If equal objects could have different hashCodes:
+Person p1 = new Person("John", 30);
+Person p2 = new Person("John", 30);  // Equal to p1
+
+map.put(p1, "Data");
+
+// If p1.hashCode() != p2.hashCode():
+// - p1 stored in bucket A
+// - Looking up with p2 searches bucket B
+// - Can't find the data even though p1.equals(p2)!
+```
+
+**Q2: Can two unequal objects have the same hashCode?**
+
+**A:** Yes! This is called a **collision** and is perfectly legal. HashMap handles this using linked lists or trees within buckets. That's why HashMap still calls `equals()` even after matching hashCodes.
+
+```java
+Person p1 = new Person("Alice", 25);
+Person p2 = new Person("Bob", 30);
+
+// These can have the same hashCode (collision)
+p1.hashCode() == p2.hashCode()  // true (collision)
+p1.equals(p2)                   // false (different persons)
+
+// HashMap handles this:
+// 1. Both go to same bucket (same hashCode)
+// 2. Stored as linked list in that bucket
+// 3. equals() distinguishes them during lookup
+```
+
+**Q3: What happens if hashCode() returns the same value for all objects?**
+
+**A:** The HashMap degrades to O(n) performance - essentially becomes a linked list!
+
+```java
+// ❌ Terrible hashCode implementation
+@Override
+public int hashCode() {
+    return 42;  // Always returns same value!
+}
+
+// Result:
+// - All entries go to same bucket
+// - HashMap becomes a single linked list
+// - get() time: O(1) → O(n)
+// - Defeats the purpose of HashMap!
+```
+
+**Q4: Why is `31` commonly used in hashCode calculations?**
+
+**A:** 
+- It's a prime number (reduces collisions)
+- It's odd (even numbers can lose information)
+- `31 * i` can be optimized by compiler to `(i << 5) - i` (fast bit shift)
+- Good distribution of hash values
+
+```java
+// Classic hashCode formula
+@Override
+public int hashCode() {
+    int result = field1.hashCode();
+    result = 31 * result + field2.hashCode();
+    result = 31 * result + field3.hashCode();
+    return result;
+}
+
+// Modern equivalent (does similar thing internally)
+@Override
+public int hashCode() {
+    return Objects.hash(field1, field2, field3);
+}
+```
+
+---
+
+#### 🎓 Summary: equals() and hashCode() Contract
+
+| Rule | Description | Why It Matters |
+|------|-------------|----------------|
+| **Rule 1** | `a.equals(b) == true` → `a.hashCode() == b.hashCode()` | HashMap needs equal objects in same bucket |
+| **Rule 2** | `a.hashCode() == b.hashCode()` ≠> `a.equals(b)` | Collisions are allowed; equals() confirms |
+| **Rule 3** | Override both or neither | HashMap needs both to work correctly |
+| **Rule 4** | Use same fields in both | Consistency prevents bugs |
+| **Rule 5** | hashCode must be consistent | Same object shouldn't jump between buckets |
+| **Rule 6** | equals must be symmetric | `a.equals(b)` == `b.equals(a)` |
+| **Rule 7** | equals must be transitive | If a=b and b=c, then a=c |
+| **Rule 8** | equals must be reflexive | `a.equals(a)` always true |
+
+**🎯 Bottom Line:** When using custom objects as HashMap keys, **ALWAYS** override both `equals()` and `hashCode()` with the same fields, or HashMap will malfunction!
+
+---
+
 ## 17. LinkedHashMap
 
 ### What is LinkedHashMap?
