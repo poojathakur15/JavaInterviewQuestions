@@ -1,0 +1,93 @@
+# Multiple Database Configuration
+# 
+# This file contains:
+#   1. Common settings for all environments (application name, server port)
+#   2. Profile-specific database configurations (dev-h2, qa, prod)
+#
+# Separate profile files for detailed configurations:
+#   - application-dev.yml (Development with MySQL + PostgreSQL)
+#   - application-qa.yml (QA/Testing environment)
+#   - application-prod.yml (Production environment)
+#
+# To activate a profile:
+#   mvn spring-boot:run -Dspring-boot.run.profiles=dev
+#   mvn spring-boot:run -Dspring-boot.run.profiles=qa
+#   java -jar app.jar --spring.profiles.active=prod
+#
+# Default profile is 'dev' if none specified
+
+# =============================================================================
+# COMMON SETTINGS (Applied to all profiles)
+# =============================================================================
+spring:
+  profiles:
+    active: dev  # Default profile (can be overridden by SPRING_PROFILES_ACTIVE env variable)
+  
+  application:
+    name: multi-database-demo
+
+  # Common JPA/Hibernate settings (can be overridden by profiles)
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+# Server configuration
+server:
+  port: 8080
+
+# Common logging configuration (can be overridden by profiles)
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# =============================================================================
+# PROFILE-SPECIFIC CONFIGURATIONS
+# =============================================================================
+# Most profiles are defined in separate files:
+#   - application-dev.yml (Development with MySQL + PostgreSQL on localhost)
+#   - application-qa.yml (QA/Testing environment)
+#   - application-prod.yml (Production environment)
+#
+# Only utility profiles are defined here:
+# =============================================================================
+
+---
+# PROFILE: dev-h2 (Development with embedded H2 databases for testing)
+# Use this profile when you don't want to set up MySQL and PostgreSQL
+# Activate with: mvn spring-boot:run -Dspring-boot.run.profiles=dev-h2
+spring:
+  config:
+    activate:
+      on-profile: dev-h2
+
+  datasource:
+    primary:
+      jdbc-url: jdbc:h2:mem:ordersdb
+      username: sa
+      password: 
+      driver-class-name: org.h2.Driver
+    
+    secondary:
+      jdbc-url: jdbc:h2:mem:usersdb
+      username: sa
+      password: 
+      driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+logging:
+  level:
+    com.example: DEBUG
+    org.hibernate.SQL: DEBUG
+
+

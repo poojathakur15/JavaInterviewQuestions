@@ -1,0 +1,177 @@
+# application-example.yml
+# 
+# This is an example configuration file showing different database configurations
+# Copy this file to create environment-specific configs:
+#   - application-dev.yml (for development)
+#   - application-prod.yml (for production)
+#   - application-local.yml (for local testing)
+
+# =============================================================================
+# EXAMPLE 1: MySQL + PostgreSQL (Default Template Configuration)
+# =============================================================================
+spring:
+  datasource:
+    primary:
+      jdbc-url: jdbc:mysql://localhost:3306/ordersdb?useSSL=false&serverTimezone=UTC
+      username: root
+      password: root123
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: PrimaryHikariPool
+    
+    secondary:
+      jdbc-url: jdbc:postgresql://localhost:5432/usersdb
+      username: postgres
+      password: postgres123
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: SecondaryHikariPool
+
+# =============================================================================
+# EXAMPLE 2: Two MySQL Databases
+# =============================================================================
+# spring:
+#   datasource:
+#     primary:
+#       jdbc-url: jdbc:mysql://localhost:3306/database1?useSSL=false&serverTimezone=UTC
+#       username: mysql_user
+#       password: mysql_pass
+#       driver-class-name: com.mysql.cj.jdbc.Driver
+#     
+#     secondary:
+#       jdbc-url: jdbc:mysql://localhost:3306/database2?useSSL=false&serverTimezone=UTC
+#       username: mysql_user
+#       password: mysql_pass
+#       driver-class-name: com.mysql.cj.jdbc.Driver
+
+# =============================================================================
+# EXAMPLE 3: Cloud Database (AWS RDS, Azure, GCP)
+# =============================================================================
+# spring:
+#   datasource:
+#     primary:
+#       jdbc-url: jdbc:mysql://my-rds-instance.region.rds.amazonaws.com:3306/mydb
+#       username: admin
+#       password: ${DB_PASSWORD}  # Use environment variable
+#       driver-class-name: com.mysql.cj.jdbc.Driver
+#       hikari:
+#         maximum-pool-size: 20
+#         minimum-idle: 10
+#     
+#     secondary:
+#       jdbc-url: jdbc:postgresql://my-postgres.region.rds.amazonaws.com:5432/mydb
+#       username: admin
+#       password: ${DB_PASSWORD_SECONDARY}
+#       driver-class-name: org.postgresql.Driver
+#       hikari:
+#         maximum-pool-size: 20
+#         minimum-idle: 10
+
+# =============================================================================
+# EXAMPLE 4: H2 In-Memory Databases (For Testing)
+# =============================================================================
+# spring:
+#   datasource:
+#     primary:
+#       jdbc-url: jdbc:h2:mem:testdb1;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+#       username: sa
+#       password: 
+#       driver-class-name: org.h2.Driver
+#     
+#     secondary:
+#       jdbc-url: jdbc:h2:mem:testdb2;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+#       username: sa
+#       password: 
+#       driver-class-name: org.h2.Driver
+#   
+#   h2:
+#     console:
+#       enabled: true
+#       path: /h2-console
+
+# =============================================================================
+# EXAMPLE 5: Oracle + SQL Server
+# =============================================================================
+# spring:
+#   datasource:
+#     primary:
+#       jdbc-url: jdbc:oracle:thin:@localhost:1521:ORCL
+#       username: oracle_user
+#       password: oracle_pass
+#       driver-class-name: oracle.jdbc.OracleDriver
+#     
+#     secondary:
+#       jdbc-url: jdbc:sqlserver://localhost:1433;databaseName=mydb
+#       username: sa
+#       password: sqlserver_pass
+#       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+# =============================================================================
+# HikariCP Advanced Configuration Options
+# =============================================================================
+# hikari:
+#   maximum-pool-size: 20              # Maximum number of connections in pool
+#   minimum-idle: 10                   # Minimum idle connections
+#   connection-timeout: 30000          # Max time to wait for connection (ms)
+#   idle-timeout: 600000               # Max time connection can sit idle (ms)
+#   max-lifetime: 1800000              # Max lifetime of connection in pool (ms)
+#   auto-commit: true                  # Auto-commit behavior
+#   connection-test-query: SELECT 1    # Query to test connection validity
+#   pool-name: MyHikariPool            # Name for the connection pool
+#   leak-detection-threshold: 60000    # Detect connection leaks after 60s
+#   validation-timeout: 5000           # Max time for connection validation
+
+# =============================================================================
+# JPA/Hibernate Configuration
+# =============================================================================
+  jpa:
+    hibernate:
+      ddl-auto: update  # Options: none, validate, update, create, create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  level:
+    com.example: DEBUG
+    org.springframework: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.zaxxer.hikari: DEBUG
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# =============================================================================
+# Application Information
+# =============================================================================
+info:
+  app:
+    name: Multi-Database Connection Pool Template
+    description: Spring Boot template for multiple database connections
+    version: 1.0.0
+

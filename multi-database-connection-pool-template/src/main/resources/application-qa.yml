@@ -1,0 +1,96 @@
+# QA/Test Environment Configuration
+# Activate with: mvn spring-boot:run -Dspring-boot.run.profiles=qa
+# Or: java -jar app.jar --spring.profiles.active=qa
+
+spring:
+  application:
+    name: multi-database-demo-qa
+
+  # PRIMARY DATABASE (MySQL - QA)
+  datasource:
+    primary:
+      jdbc-url: jdbc:mysql://qa-mysql-server:3306/ordersdb_qa?useSSL=true&serverTimezone=UTC
+      username: qa_user
+      password: ${DB_PRIMARY_PASSWORD:qa_password}  # Use env variable or default
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+      # HikariCP - QA settings (moderate pool)
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: QaPrimaryHikariPool
+        connection-test-query: SELECT 1
+    
+    # SECONDARY DATABASE (PostgreSQL - QA)
+    secondary:
+      jdbc-url: jdbc:postgresql://qa-postgres-server:5432/usersdb_qa
+      username: qa_user
+      password: ${DB_SECONDARY_PASSWORD:qa_password}
+      driver-class-name: org.postgresql.Driver
+      
+      # HikariCP - QA settings
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: QaSecondaryHikariPool
+        connection-test-query: SELECT 1
+
+  # JPA/Hibernate - QA settings
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Only validate schema, don't modify
+    show-sql: true        # Show SQL for debugging
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+# Logging - Moderate verbosity for QA
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+    org.springframework: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
+    com.zaxxer.hikari: INFO
+  file:
+    name: logs/qa-application.log
+    max-size: 10MB
+    max-history: 30
+
+# Server Configuration
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-stacktrace: on_param
+
+# Actuator - Limited endpoints in QA
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# QA-specific settings
+app:
+  environment: QA
+  debug-mode: false
+  feature-flags:
+    new-feature: true  # Test new features in QA
+  test-data-enabled: true
+
